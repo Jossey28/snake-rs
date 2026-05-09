@@ -21,20 +21,80 @@ fn main() -> io::Result<()> {
     ratatui::run(|terminal| App::default().run(terminal))
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct App {
     exit: bool,
     appstate: AppState,
     food: Food,
+    snake: Snake,
+    settings: Settings,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct Food {
     x: u16,
     y: u16,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone)]
+pub struct Snake {
+    head: Rect,
+    body: Option<Vec<Rect>>,
+    tail: Option<Rect>,
+    direction: Direction,
+}
+
+impl Default for Snake {
+    fn default() -> Self {
+        Snake { 
+            head: Rect::new(50, 50, 2, 1),
+            body: None, 
+            tail: None, 
+            direction: Direction::Down, 
+        }
+    }
+}
+
+impl Snake {
+    fn move_snake(&mut self, app: App) -> AppState {
+        match self.direction {
+            Direction::Up => {
+                if self.head.y > 0 {
+                    self.head.y -= 1;
+                    return AppState::Active;
+                } else {
+                    return AppState::Dead;
+                }
+            },
+            Direction::Down =>{ 
+                if self.head.y + 1 < app.settings.terminal_height {
+                    self.head.y += 1;
+                    return AppState::Active;
+                } else {
+                    return AppState::Dead;
+                }
+            },
+            Direction::Left => {
+                if self.head.x > 0 {
+                    self.head.x -= 1;
+                    return AppState::Active;
+                } else {
+                    return AppState::Dead;
+                }
+            },
+            Direction::Right => {
+                if self.head.x + 1 < app.settings.terminal_width {
+                    self.head.x += 1;
+                    return AppState::Active;
+                } else {
+                    return AppState::Dead;
+                }  
+            },
+        }
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub enum AppState {
     #[default]
     TitleScreen,
@@ -42,11 +102,20 @@ pub enum AppState {
     Dead
 }
 
-// impl Default for App {
-//     fn default() -> Self {
-//         App { exit: false, appstate: AppState::TitleScreen }
-//     }
-// }
+#[derive(Debug, Default, Clone, Copy)]
+pub enum Direction {
+    #[default]
+    Up,
+    Down,
+    Left,
+    Right,
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct Settings {
+    terminal_width: u16,
+    terminal_height: u16,
+}
 
 impl App {
     pub fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
@@ -63,8 +132,12 @@ impl App {
     }
 
     fn draw(&mut self, frame: &mut Frame) {
+        self.settings.terminal_height = frame.area().height;
+        self.settings.terminal_width = frame.area().width;
+
         match self.appstate {
             AppState::TitleScreen => self.show_title(frame),
+            AppState::Dead => self.show_title(frame),
             AppState::Active => self.play_snake(frame),
             _ => {}
         }
@@ -103,21 +176,27 @@ impl App {
     }
 
     fn play_snake(&mut self, frame: &mut Frame) {
-        self.regen_food(frame);
+        let current_appstate = self.snake.move_snake(self.clone());
+        if current_appstate != AppState::Active {
+            return
+        }
 
-        let area = Rect::new(self.food.x, self.food.y, 2, 1); // Width is double height due to terminal shenanigans.
+        let block = Block::default().style(Style::new().bg(Color::LightGreen));
 
-        let block = Block::default().style(Style::new().bg(Color::Blue));
-
-        frame.render_widget(block, area);
+        frame.render_widget(block, self.snake.head);
     }
 
     fn regen_food(&mut self, frame: &mut Frame) {
         let mut rng = rand::rng();
 
-        self.food.x = rng.random_range(..frame.area().width - 10);
-        self.food.y = rng.random_range(..frame.area().height - 10);
-        // println!("x: {}, y: {}", self.food.x, self.food.y);
+        self.food.y = rng.random_range(..self.settings.terminal_height - 10);
+        self.food.x = rng.random_range(..self.settings.terminal_width - 10);
+
+        let area = Rect::new(self.food.x, self.food.y, 2, 1); // Width is double height due to terminal shenanigans.
+
+        let block = Block::default().style(Style::new().bg(Color::Red));
+
+        frame.render_widget(block, area);
     }
 
     fn handle_events(&mut self) -> io::Result<()> {
@@ -133,9 +212,14 @@ impl App {
 
     fn handle_key_event(&mut self, key_event: KeyEvent) {
         match key_event.code {
-            KeyCode::Char('a') => self.appstate = AppState::Active,
-            // KeyCode::Char('s') => self.regen_food(),
-            KeyCode::Char('d') => self.appstate = AppState::TitleScreen,
+            KeyCode::Enter => self.appstate = AppState::Active,
+            KeyCode::Char('q') => self.appstate = AppState::TitleScreen,
+
+            KeyCode::Char('w') | KeyCode::Up => self.snake.direction = Direction::Up,
+            KeyCode::Char('a') | KeyCode::Left => self.snake.direction = Direction::Left,
+            KeyCode::Char('s') | KeyCode::Down => self.snake.direction = Direction::Down,
+            KeyCode::Char('d') | KeyCode::Right => self.snake.direction = Direction::Right,
+
             _ => { self.exit() }
         }
     }
