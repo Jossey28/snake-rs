@@ -7,3 +7,4 @@ edition = "2024"
 color-eyre = "0.6.5"
 crossterm = "0.29.0"
 ratatui = { version = "0.30.0", features = ["serde"] }
+tui-big-text = "0.8.4"
