@@ -1,8 +1,11 @@
-use std::{default, io};
+use std::io;
+use std::time::SystemTime;
 
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
 
 use tui_big_text::{BigText, PixelSize};
+
+use rand::{Rng, RngExt};
 
 use ratatui::layout::{Alignment, Constraint, Layout, Rect};
 use ratatui::style::{Color, Style, Stylize};
@@ -12,13 +15,23 @@ use ratatui::{DefaultTerminal, Frame};
 use ratatui::widgets::{Block, Borders, Paragraph, Widget};
 
 fn main() -> io::Result<()> {
+    let current_time =  SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
+    fastrand::seed(current_time.as_secs());
+
     ratatui::run(|terminal| App::default().run(terminal))
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct App {
     exit: bool,
     appstate: AppState,
+    food: Food,
+}
+
+#[derive(Debug, Default)]
+pub struct Food {
+    x: u16,
+    y: u16,
 }
 
 #[derive(Debug, Default)]
@@ -29,11 +42,11 @@ pub enum AppState {
     Dead
 }
 
-impl Default for App {
-    fn default() -> Self {
-        App { exit: false, appstate: AppState::TitleScreen }
-    }
-}
+// impl Default for App {
+//     fn default() -> Self {
+//         App { exit: false, appstate: AppState::TitleScreen }
+//     }
+// }
 
 impl App {
     pub fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
@@ -49,7 +62,7 @@ impl App {
         self.exit = true;
     }
 
-    fn draw(&self, frame: &mut Frame) {
+    fn draw(&mut self, frame: &mut Frame) {
         match self.appstate {
             AppState::TitleScreen => self.show_title(frame),
             AppState::Active => self.play_snake(frame),
@@ -89,14 +102,22 @@ impl App {
         frame.render_widget(text, horizontal_chunks[1]);
     }
 
-    fn play_snake(&self, frame: &mut Frame) {
-        let area = Rect::new(5, 2, 50, 20);
+    fn play_snake(&mut self, frame: &mut Frame) {
+        self.regen_food(frame);
 
-        let block = Block::default()
-            .title("Floating Rect")
-            .borders(Borders::all());
+        let area = Rect::new(self.food.x, self.food.y, 2, 1); // Width is double height due to terminal shenanigans.
+
+        let block = Block::default().style(Style::new().bg(Color::Blue));
 
         frame.render_widget(block, area);
+    }
+
+    fn regen_food(&mut self, frame: &mut Frame) {
+        let mut rng = rand::rng();
+
+        self.food.x = rng.random_range(..frame.area().width - 10);
+        self.food.y = rng.random_range(..frame.area().height - 10);
+        // println!("x: {}, y: {}", self.food.x, self.food.y);
     }
 
     fn handle_events(&mut self) -> io::Result<()> {
@@ -112,18 +133,10 @@ impl App {
 
     fn handle_key_event(&mut self, key_event: KeyEvent) {
         match key_event.code {
+            KeyCode::Char('a') => self.appstate = AppState::Active,
+            // KeyCode::Char('s') => self.regen_food(),
+            KeyCode::Char('d') => self.appstate = AppState::TitleScreen,
             _ => { self.exit() }
         }
     }
 }
-
-// impl Widget for &App {
-//     fn render(self, area: Rect, buf: &mut ratatui::prelude::Buffer)
-//     where
-//         Self: Sized
-//     {
-//         let title = Paragraph::new("Hello World");
-
-//         title.render(area, buf);
-//     }
-// }
