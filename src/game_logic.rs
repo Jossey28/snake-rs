@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use ratatui::layout::Position;
 
 use crate::App;
@@ -70,8 +72,16 @@ impl Snake {
     }
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub struct Settings {
     pub terminal_width: u16,
     pub terminal_height: u16,
+
+    pub tick_rate: Duration,
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Settings { terminal_width: 0, terminal_height: 0, tick_rate: Duration::from_millis(250) }
+    }
 }

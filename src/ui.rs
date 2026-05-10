@@ -8,7 +8,6 @@ use tui_big_text::PixelSize;
 
 use ratatui::prelude::Stylize;
 
-
 pub fn show_title(frame: &mut Frame) -> ()  {
         let verticle_chunks = Layout::default()
             .direction(ratatui::layout::Direction::Vertical)

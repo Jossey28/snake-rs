@@ -1,21 +1,15 @@
-mod ui;
 mod game_logic;
+mod ui;
 
-use std::time::{Duration, SystemTime};
+use std::time::{Duration, Instant};
 
 use color_eyre::eyre::{Context, Result};
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
 
-use tui_big_text::{BigText, PixelSize};
-
-use rand::{Rng, RngExt};
-
-use ratatui::layout::{Alignment, Constraint, Layout, Position, Positions, Rect};
-use ratatui::style::{Color, Style, Stylize};
-use ratatui::symbols::Marker;
-use ratatui::text::{Line as TextLine, Span, Text};
+use ratatui::layout::{Position, Rect};
+use ratatui::style::Color;
+use ratatui::widgets::Widget;
 use ratatui::{DefaultTerminal, Frame};
-use ratatui::widgets::{Block, Borders, Paragraph, Widget};
 
 use crate::game_logic::Direction;
 
@@ -37,6 +31,8 @@ pub struct App {
 
     snake: game_logic::Snake,
     settings: game_logic::Settings,
+
+    last_tick: Option<Instant>,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
@@ -44,17 +40,18 @@ pub enum AppState {
     #[default]
     TitleScreen,
     Active,
-    Dead
+    Dead,
 }
 
 impl App {
-    pub fn run(&mut self, terminal: &mut DefaultTerminal) -> std::prelude::v1::Result<(), color_eyre::eyre::Error> {
-        let frame_timeout = Duration::from_secs_f64(1.0 / 60.0); // Run at 60fps    
-        event::poll(frame_timeout)?;
+    pub fn run(
+        &mut self,
+        terminal: &mut DefaultTerminal,
+    ) -> std::prelude::v1::Result<(), color_eyre::eyre::Error> {
+        self.last_tick = Some(Instant::now());
 
         while !self.exit {
             terminal.draw(|frame| self.draw(frame))?;
-            
             self.handle_events()?;
 
             self.snake.move_snake(self.clone());
@@ -79,14 +76,22 @@ impl App {
     }
 
     fn handle_events(&mut self) -> Result<()> {
-        match event::read()? {
-            Event::Key(key_event) if key_event.kind == KeyEventKind::Press => {
-                self
-                .handle_key_event(key_event)
-                .wrap_err_with(|| format!("handling key event failed:\n{key_event:#?}"));
+        let frame_timeout: Duration = Duration::from_secs_f64(1.0 / 60.0); // Run at 60fps    
+
+        if event::poll(frame_timeout)? {
+            match event::read()? {
+                Event::Key(key_event) if key_event.kind == KeyEventKind::Press => {
+                    self.handle_key_event(key_event)
+                        .wrap_err_with(|| format!("handling key event failed:\n{key_event:#?}"));
+                }
+                _ => {} // For some reason it doesn't work with Ok(()). Fix later.
+            };
         }
-        _ => {} // For some reason it doesn't work with Ok(()). Fix later.
-    }
+
+        let last_tick = self.last_tick.unwrap();
+        if last_tick.elapsed() >= self.settings.tick_rate {
+            self.snake.move_snake(self.clone());
+        }
 
         Ok(())
     }
@@ -102,7 +107,7 @@ impl App {
             KeyCode::Char('s') | KeyCode::Down => Ok(self.snake.direction = Direction::Down),
             KeyCode::Char('d') | KeyCode::Right => Ok(self.snake.direction = Direction::Right),
 
-            _ => { Ok(self.exit()) }
+            _ => Ok(self.exit()),
         }
     }
 }
@@ -110,12 +115,29 @@ impl App {
 impl Widget for &App {
     fn render(self, area: Rect, buf: &mut ratatui::prelude::Buffer)
     where
-        Self: Sized
+        Self: Sized,
     {
-        let snake_head = buf.cell_mut(self.snake.head).expect("invalid snake head position");
-        snake_head.set_bg(Color::Green);
+        let terminal_color = buf
+            .cell_mut(Position::new(area.width - 1, area.height - 1))
+            .expect("Invalid buffer for term color")
+            .bg;
+
+        let snake_head = buf
+            .cell_mut(self.snake.head)
+            .expect("invalid snake head position");
+        // snake_head.set_char('▀');
+        match self.snake.direction {
+            Direction::Left => snake_head.set_char('◀'), // https://cloford.com/resources/charcodes/utf-8_geometric.htm
+            Direction::Right => snake_head.set_char('▶'), // Starting @ UTF8+9654
+            Direction::Up => snake_head.set_char('▲'),   // Or "BLACK UP-POINTING TRIANGLE"
+            Direction::Down => snake_head.set_char('▼'),
+        };
+        snake_head.set_fg(Color::Green);
+        snake_head.set_bg(terminal_color);
 
         let food_location = buf.cell_mut(self.food).expect("invalid food position");
-        food_location.set_bg(Color::Red);
+        food_location.set_char('▀');
+        food_location.set_fg(Color::Red);
+        food_location.set_bg(terminal_color);
     }
 }
