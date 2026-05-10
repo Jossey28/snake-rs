@@ -1,6 +1,8 @@
+use std::fmt::format;
 use std::io;
-use std::time::SystemTime;
+use std::time::{Duration, SystemTime};
 
+use color_eyre::eyre::{Context, Result};
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
 
 use tui_big_text::{BigText, PixelSize};
@@ -14,11 +16,12 @@ use ratatui::text::{Line as TextLine, Span, Text};
 use ratatui::{DefaultTerminal, Frame};
 use ratatui::widgets::{Block, Borders, Paragraph, Widget};
 
-fn main() -> io::Result<()> {
-    let current_time =  SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
-    fastrand::seed(current_time.as_secs());
-
-    ratatui::run(|terminal| App::default().run(terminal))
+fn main() -> Result<()> {
+    color_eyre::install()?;
+    let mut terminal = ratatui::init();
+    let app_result = App::default().run(&mut terminal);
+    ratatui::restore();
+    app_result
 }
 
 #[derive(Debug, Default, Clone)]
@@ -47,7 +50,7 @@ pub struct Snake {
 impl Default for Snake {
     fn default() -> Self {
         Snake { 
-            head: Rect::new(50, 50, 2, 1),
+            head: Rect::new(25, 25, 2, 1),
             body: None, 
             tail: None, 
             direction: Direction::Down, 
@@ -118,10 +121,16 @@ pub struct Settings {
 }
 
 impl App {
-    pub fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
+    pub fn run(&mut self, terminal: &mut DefaultTerminal) -> std::prelude::v1::Result<(), color_eyre::eyre::Error> {
+        let frame_timeout = Duration::from_secs_f64(1.0 / 60.0); // Run at 60fps    
+        event::poll(frame_timeout)?;
+
         while !self.exit {
             terminal.draw(|frame| self.draw(frame))?;
+            
             self.handle_events()?;
+
+            self.snake.move_snake(self.clone());
         }
 
         Ok(())
@@ -199,28 +208,31 @@ impl App {
         frame.render_widget(block, area);
     }
 
-    fn handle_events(&mut self) -> io::Result<()> {
+    fn handle_events(&mut self) -> Result<()> {
         match event::read()? {
             Event::Key(key_event) if key_event.kind == KeyEventKind::Press => {
-                self.handle_key_event(key_event);
-            }
-            _ => {}
+                self
+                .handle_key_event(key_event)
+                .wrap_err_with(|| format!("handling key event failed:\n{key_event:#?}"));
         }
+        _ => {} // For some reason it doesn't work with Ok(()). Fix later.
+    }
 
         Ok(())
     }
 
-    fn handle_key_event(&mut self, key_event: KeyEvent) {
+    fn handle_key_event(&mut self, key_event: KeyEvent) -> Result<()> {
         match key_event.code {
-            KeyCode::Enter => self.appstate = AppState::Active,
-            KeyCode::Char('q') => self.appstate = AppState::TitleScreen,
+            KeyCode::Enter => Ok(self.appstate = AppState::Active),
+            KeyCode::Char('q') => Ok(self.appstate = AppState::TitleScreen),
+            KeyCode::Esc => Ok(self.exit()),
 
-            KeyCode::Char('w') | KeyCode::Up => self.snake.direction = Direction::Up,
-            KeyCode::Char('a') | KeyCode::Left => self.snake.direction = Direction::Left,
-            KeyCode::Char('s') | KeyCode::Down => self.snake.direction = Direction::Down,
-            KeyCode::Char('d') | KeyCode::Right => self.snake.direction = Direction::Right,
+            KeyCode::Char('w') | KeyCode::Up => Ok(self.snake.direction = Direction::Up),
+            KeyCode::Char('a') | KeyCode::Left => Ok(self.snake.direction = Direction::Left),
+            KeyCode::Char('s') | KeyCode::Down => Ok(self.snake.direction = Direction::Down),
+            KeyCode::Char('d') | KeyCode::Right => Ok(self.snake.direction = Direction::Right),
 
-            _ => { self.exit() }
+            _ => { Ok(self.exit()) }
         }
     }
 }
