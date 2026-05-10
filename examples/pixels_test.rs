@@ -26,6 +26,7 @@ struct App {
     exit: bool,
     terminal_width: u16,
     terminal_height: u16,
+    mode: u8, 
 }
 
 impl App {
@@ -39,6 +40,8 @@ impl App {
             if let Some(key) = event::read()?.as_key_press_event() {
                 match key.code {
                     KeyCode::Char('q') | KeyCode::Esc => self.exit(),
+                    KeyCode::Char('1') => self.mode = 1,
+                    KeyCode::Char('2') => self.mode = 2,
                     _ => self.exit()
                 }
             }
@@ -66,13 +69,18 @@ impl Widget for &App {
     {
         // let boxes: Vec<Rect> = Vec::new();
 
-        for (_xi, x) in (area.left()..area.right()).enumerate() {
-            for (_yi, y) in (area.top()..area.bottom()).enumerate() {
-                dbg!(&buf);
+        for (xi, x) in (area.left()..area.right()).enumerate() {
+            for (yi, y) in (area.top()..area.bottom()).enumerate() {
+                static POSSIBLE_COLORS: [Color; 3] = [Color::Red, Color::Green, Color::Blue];
 
-                Paragraph::new(format!("{} {}", x, y))
-                    .block(Block::bordered())
-                    .render(area, buf);
+                let buffer_unsafe = buf.cell_mut(Position::new(x, y));
+                let buffer = buffer_unsafe.unwrap();
+
+                match self.mode {
+                    0 | 1 => buffer.set_bg(POSSIBLE_COLORS[xi % 3]),
+                    2 => buffer.set_bg(POSSIBLE_COLORS[yi % 3]),
+                    _ => buffer.set_bg(POSSIBLE_COLORS[xi % 3])
+                };
             }
         }
     }
