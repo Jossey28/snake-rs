@@ -1,23 +1,29 @@
+mod event_handler;
 mod game_logic;
 mod ui;
 
+use std::sync::mpsc;
+use std::thread;
 use std::time::{Duration, Instant};
 
 use color_eyre::eyre::{Context, Result};
-use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
+use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, MouseEvent};
 
 use ratatui::layout::{Position, Rect};
 use ratatui::style::Color;
 use ratatui::widgets::Widget;
 use ratatui::{DefaultTerminal, Frame};
 
+use crate::event_handler::{GameEvent, GameEventHandler};
 use crate::game_logic::Direction;
 
 fn main() -> Result<()> {
     color_eyre::install()?;
 
     let mut terminal = ratatui::init();
-    let app_result = App::default().run(&mut terminal);
+    let mut app = App::default();
+    let events = GameEventHandler::new(app.settings.tick_rate);
+    let app_result = app.run(&mut terminal, events);
 
     ratatui::restore();
     app_result
@@ -47,14 +53,24 @@ impl App {
     pub fn run(
         &mut self,
         terminal: &mut DefaultTerminal,
+        events: GameEventHandler,
     ) -> std::prelude::v1::Result<(), color_eyre::eyre::Error> {
         self.last_tick = Some(Instant::now());
 
         while !self.exit {
             terminal.draw(|frame| self.draw(frame))?;
-            self.handle_events()?;
 
-            self.snake.move_snake(self.clone());
+            match events.next()? {
+                GameEvent::Tick => {
+                    if self.appstate == AppState::Active {
+                        let app_state = self.snake.move_snake(self.clone());
+                        self.appstate = app_state;
+                    }
+                }
+                GameEvent::Key(key_event) => self.handle_key_event(key_event)?,
+                GameEvent::Mouse(_) => {}
+                GameEvent::Resize(_, _) => {}
+            }
         }
 
         Ok(())
