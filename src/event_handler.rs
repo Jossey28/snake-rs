@@ -46,7 +46,7 @@ impl GameEventHandler {
                         match event::read().expect("Unable to read event") {
                             Event::Key(e) => {
                                 if e.kind == event::KeyEventKind::Press {
-                                    sender.send(GameEvent::Key(e));
+                                    sender.send(GameEvent::Key(e)).expect("Unable to send key event");
                                 }
                             },
                             Event::Mouse(e) => sender.send(GameEvent::Mouse(e)).expect("Unable to send mouse event"),

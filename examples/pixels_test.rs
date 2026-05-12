@@ -1,18 +1,11 @@
 use std::io;
-use std::time::{Duration, SystemTime};
 
-use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
+use crossterm::event::{self, KeyCode};
 
-use tui_big_text::{BigText, PixelSize};
-
-use rand::{Rng, RngExt};
-
-use ratatui::layout::{Alignment, Constraint, Layout, Position, Rect};
-use ratatui::style::{Color, Style, Stylize};
-use ratatui::symbols::Marker;
-use ratatui::text::{Line as TextLine, Span, Text};
+use ratatui::layout::{Position, Rect};
+use ratatui::style::Color;
 use ratatui::{DefaultTerminal, Frame};
-use ratatui::widgets::{Block, Borders, Paragraph, Widget};
+use ratatui::widgets::Widget;
 
 fn main () -> io::Result<()> {
     ratatui::run(

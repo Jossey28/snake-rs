@@ -2,12 +2,10 @@ mod event_handler;
 mod game_logic;
 mod ui;
 
-use std::sync::mpsc;
-use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
-use color_eyre::eyre::{Context, Result};
-use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, MouseEvent};
+use color_eyre::eyre::Result;
+use crossterm::event::{KeyCode, KeyEvent};
 
 use ratatui::layout::{Position, Rect};
 use ratatui::style::Color;
@@ -15,7 +13,7 @@ use ratatui::widgets::Widget;
 use ratatui::{DefaultTerminal, Frame};
 
 use crate::event_handler::{GameEvent, GameEventHandler};
-use crate::game_logic::Direction;
+use crate::game_logic::{Direction, Snake};
 
 fn main() -> Result<()> {
     color_eyre::install()?;
@@ -47,6 +45,7 @@ pub enum AppState {
     TitleScreen,
     Active,
     Dead,
+    Coliding,
 }
 
 impl App {
@@ -56,6 +55,7 @@ impl App {
         events: GameEventHandler,
     ) -> std::prelude::v1::Result<(), color_eyre::eyre::Error> {
         self.last_tick = Some(Instant::now());
+        self.food = Position { x: 10, y: 10 };
 
         while !self.exit {
             terminal.draw(|frame| self.draw(frame))?;
@@ -76,6 +76,11 @@ impl App {
         Ok(())
     }
 
+    fn handle_collision(&mut self) {    
+        self.food = Position { x: fastrand::u16(0..self.settings.terminal_width), y: fastrand::u16(0..self.settings.terminal_height) };
+        self.appstate = AppState::Active;
+    } 
+
     fn exit(&mut self) {
         self.exit = true;
     }
@@ -88,40 +93,29 @@ impl App {
             AppState::TitleScreen => ui::show_title(frame),
             AppState::Dead => ui::show_title(frame),
             AppState::Active => frame.render_widget(&*self, frame.area()),
+            AppState::Coliding => self.handle_collision(),
         }
     }
 
-    fn handle_events(&mut self) -> Result<()> {
-        let frame_timeout: Duration = Duration::from_secs_f64(1.0 / 60.0); // Run at 60fps    
-
-        if event::poll(frame_timeout)? {
-            match event::read()? {
-                Event::Key(key_event) if key_event.kind == KeyEventKind::Press => {
-                    self.handle_key_event(key_event)
-                        .wrap_err_with(|| format!("handling key event failed:\n{key_event:#?}"));
-                }
-                _ => {} // For some reason it doesn't work with Ok(()). Fix later.
-            };
-        }
-
-        let last_tick = self.last_tick.unwrap();
-        if last_tick.elapsed() >= self.settings.tick_rate {
-            self.snake.move_snake(self.clone());
-        }
-
-        Ok(())
+    fn start_game(&mut self) {
+        self.snake = Snake::default();
+        self.appstate = AppState::Active;
     }
 
     fn handle_key_event(&mut self, key_event: KeyEvent) -> Result<()> {
+        let active = {
+            self.appstate == AppState::Active
+        };
+
         match key_event.code {
-            KeyCode::Enter => Ok(self.appstate = AppState::Active),
-            KeyCode::Char('q') => Ok(self.appstate = AppState::TitleScreen),
+            KeyCode::Enter if !active => Ok(self.start_game()),
+            KeyCode::Char('q') if active => Ok(self.appstate = AppState::TitleScreen),
             KeyCode::Esc => Ok(self.exit()),
 
-            KeyCode::Char('w') | KeyCode::Up => Ok(self.snake.direction = Direction::Up),
-            KeyCode::Char('a') | KeyCode::Left => Ok(self.snake.direction = Direction::Left),
-            KeyCode::Char('s') | KeyCode::Down => Ok(self.snake.direction = Direction::Down),
-            KeyCode::Char('d') | KeyCode::Right => Ok(self.snake.direction = Direction::Right),
+            KeyCode::Char('w') | KeyCode::Up if active => Ok(self.snake.direction = Direction::Up),
+            KeyCode::Char('a') | KeyCode::Left if active => Ok(self.snake.direction = Direction::Left),
+            KeyCode::Char('s') | KeyCode::Down if active => Ok(self.snake.direction = Direction::Down),
+            KeyCode::Char('d') | KeyCode::Right if active => Ok(self.snake.direction = Direction::Right),
 
             _ => Ok(self.exit()),
         }

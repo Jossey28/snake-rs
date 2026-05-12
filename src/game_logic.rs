@@ -25,10 +25,10 @@ pub struct Snake {
 impl Default for Snake {
     fn default() -> Self {
         Snake { 
-            head: Position { x: 0, y: 0 },
+            head: Position { x: 5, y: 5 },
             body: None, 
             tail: None, 
-            direction: Direction::Up, 
+            direction: Direction::Down, 
         }
     }
 }
@@ -39,6 +39,11 @@ impl Snake {
             Direction::Up => {
                 if self.head.y > 0 {
                     self.head.y -= 1;
+
+                    if self.is_at_food(app.food) {
+                      return AppState::Coliding;  
+                    } 
+
                     return AppState::Active;
                 } else {
                     return AppState::Dead;
@@ -47,6 +52,11 @@ impl Snake {
             Direction::Down =>{ 
                 if self.head.y + 1 < app.settings.terminal_height {
                     self.head.y += 1;
+
+                    if self.is_at_food(app.food) {
+                      return AppState::Coliding;  
+                    } 
+                    
                     return AppState::Active;
                 } else {
                     return AppState::Dead;
@@ -55,6 +65,11 @@ impl Snake {
             Direction::Left => {
                 if self.head.x > 0 {
                     self.head.x -= 1;
+
+                    if self.is_at_food(app.food) {
+                      return AppState::Coliding;  
+                    } 
+
                     return AppState::Active;
                 } else {
                     return AppState::Dead;
@@ -63,12 +78,25 @@ impl Snake {
             Direction::Right => {
                 if self.head.x + 1 < app.settings.terminal_width {
                     self.head.x += 1;
+
+                    if self.is_at_food(app.food) {
+                      return AppState::Coliding;  
+                    } 
+
                     return AppState::Active;
                 } else {
                     return AppState::Dead;
                 }  
             },
         }
+    }
+
+    fn is_at_food(&self, food: Position) -> bool {
+        let coliding = {
+            self.head == food
+        };
+
+        return coliding;
     }
 }
 
@@ -82,6 +110,6 @@ pub struct Settings {
 
 impl Default for Settings {
     fn default() -> Self {
-        Settings { terminal_width: 0, terminal_height: 0, tick_rate: Duration::from_millis(250) }
+        Settings { terminal_width: 0, terminal_height: 0, tick_rate: Duration::from_millis(50) }
     }
 }
