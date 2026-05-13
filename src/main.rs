@@ -92,7 +92,10 @@ impl App {
         match self.appstate {
             AppState::TitleScreen => ui::show_title(frame),
             AppState::Dead => ui::show_title(frame),
-            AppState::Active => frame.render_widget(&*self, frame.area()),
+            AppState::Active => {
+                frame.render_widget(&self.snake, frame.area());
+                frame.render_widget(&*self, frame.area());
+                },
             AppState::Coliding => self.handle_collision(),
         }
     }
@@ -108,17 +111,19 @@ impl App {
         };
 
         match key_event.code {
-            KeyCode::Enter if !active => Ok(self.start_game()),
-            KeyCode::Char('q') if active => Ok(self.appstate = AppState::TitleScreen),
-            KeyCode::Esc => Ok(self.exit()),
+            KeyCode::Enter if !active => self.start_game(),
+            KeyCode::Char('q') if active => self.appstate = AppState::TitleScreen,
+            KeyCode::Esc => self.exit(),
 
-            KeyCode::Char('w') | KeyCode::Up if active => Ok(self.snake.direction = Direction::Up),
-            KeyCode::Char('a') | KeyCode::Left if active => Ok(self.snake.direction = Direction::Left),
-            KeyCode::Char('s') | KeyCode::Down if active => Ok(self.snake.direction = Direction::Down),
-            KeyCode::Char('d') | KeyCode::Right if active => Ok(self.snake.direction = Direction::Right),
+            KeyCode::Char('w') | KeyCode::Up if active => self.snake.change_direction(Direction::Up),
+            KeyCode::Char('a') | KeyCode::Left if active => self.snake.change_direction(Direction::Left),
+            KeyCode::Char('s') | KeyCode::Down if active => self.snake.change_direction(Direction::Down),
+            KeyCode::Char('d') | KeyCode::Right if active => self.snake.change_direction(Direction::Right),
 
-            _ => Ok(self.exit()),
-        }
+            _ => {},
+        };
+
+        Ok(())
     }
 }
 
