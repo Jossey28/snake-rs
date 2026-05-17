@@ -240,8 +240,8 @@ impl Widget for &Snake {
         // snake_head.set_char('▀');
         match self.direction {
             Direction::Left => snake_head.set_char('◀'), // https://cloford.com/resources/charcodes/utf-8_geometric.htm
-            Direction::Right => snake_head.set_char('▸'), // Starting @ UTF8+9654
-            Direction::Up => snake_head.set_char('▴'),   // Or "BLACK UP-POINTING TRIANGLE"
+            Direction::Right => snake_head.set_char('▶'), // Starting @ UTF8+9654
+            Direction::Up => snake_head.set_char('▲'),   // Or "BLACK UP-POINTING TRIANGLE"
             Direction::Down => snake_head.set_char('▼'),
         };
 
