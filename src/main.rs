@@ -7,13 +7,11 @@ use std::time::Instant;
 use color_eyre::eyre::Result;
 use crossterm::event::{KeyCode, KeyEvent};
 
-use ratatui::layout::{Position, Rect};
-use ratatui::style::Color;
-use ratatui::widgets::Widget;
+use ratatui::layout::Position;
 use ratatui::{DefaultTerminal, Frame};
 
 use crate::event_handler::{GameEvent, GameEventHandler};
-use crate::game_logic::{Direction, Snake};
+use crate::game_logic::{Direction, Snake, Food, GlobalSettings};
 
 fn main() -> Result<()> {
     color_eyre::install()?;
@@ -31,10 +29,10 @@ fn main() -> Result<()> {
 pub struct App {
     exit: bool,
     appstate: AppState,
-    food: Position,
+    food: Food,
 
-    snake: game_logic::Snake,
-    settings: game_logic::Settings,
+    snake: Snake,
+    settings: GlobalSettings,
 
     last_tick: Option<Instant>,
 }
@@ -55,7 +53,7 @@ impl App {
         events: GameEventHandler,
     ) -> std::prelude::v1::Result<(), color_eyre::eyre::Error> {
         self.last_tick = Some(Instant::now());
-        self.food = Position { x: 10, y: 10 };
+        self.food = Food::default();
 
         while !self.exit {
             terminal.draw(|frame| self.draw(frame))?;
@@ -63,7 +61,8 @@ impl App {
             match events.next()? {
                 GameEvent::Tick => {
                     if self.appstate == AppState::Active {
-                        let app_state = self.snake.move_snake(self.clone());
+                        let food = &self.food;
+                        let app_state = self.snake.move_snake(food.into());
                         self.appstate = app_state;
                     }
                 }
@@ -77,7 +76,7 @@ impl App {
     }
 
     fn handle_collision(&mut self) {    
-        self.food = Position { x: fastrand::u16(0..self.settings.terminal_width), y: fastrand::u16(0..self.settings.terminal_height) };
+        self.food = Food::from((fastrand::u16(0..self.settings.terminal_width), fastrand::u16(0..self.settings.terminal_height)));
         self.appstate = AppState::Active;
     } 
 
@@ -94,7 +93,7 @@ impl App {
             AppState::Dead => ui::show_title(frame),
             AppState::Active => {
                 frame.render_widget(&self.snake, frame.area());
-                frame.render_widget(&*self, frame.area());
+                frame.render_widget(&self.food, frame.area());
                 },
             AppState::Coliding => self.handle_collision(),
         }
@@ -124,35 +123,5 @@ impl App {
         };
 
         Ok(())
-    }
-}
-
-impl Widget for &App {
-    fn render(self, area: Rect, buf: &mut ratatui::prelude::Buffer)
-    where
-        Self: Sized,
-    {
-        let terminal_color = buf
-            .cell_mut(Position::new(area.width - 1, area.height - 1))
-            .expect("Invalid buffer for term color")
-            .bg;
-
-        let snake_head = buf
-            .cell_mut(self.snake.head)
-            .expect("invalid snake head position");
-        // snake_head.set_char('▀');
-        match self.snake.direction {
-            Direction::Left => snake_head.set_char('◀'), // https://cloford.com/resources/charcodes/utf-8_geometric.htm
-            Direction::Right => snake_head.set_char('▶'), // Starting @ UTF8+9654
-            Direction::Up => snake_head.set_char('▲'),   // Or "BLACK UP-POINTING TRIANGLE"
-            Direction::Down => snake_head.set_char('▼'),
-        };
-        snake_head.set_fg(Color::Green);
-        snake_head.set_bg(terminal_color);
-
-        let food_location = buf.cell_mut(self.food).expect("invalid food position");
-        food_location.set_char('▀');
-        food_location.set_fg(Color::Red);
-        food_location.set_bg(terminal_color);
     }
 }
