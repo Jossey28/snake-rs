@@ -84,7 +84,7 @@ impl Default for Snake {
         Snake {
             head: SnakeBody::new(head, head),
             body: vec![first_piece, second_piece],
-            direction: Direction::Down,
+            direction: Direction::Right,
         }
     }
 }
@@ -113,17 +113,13 @@ impl Snake {
     }
 
     fn move_snake_body(&mut self) {
-        let mut prev: Option<&mut SnakeBody> = None;
-        for mut part in self.body.iter_mut() {
-            if let Some(p) = prev.take() {
-                part.last_position = part.current_position;
-                part = p;
-                continue;
-            }
-
-            part.last_position = part.current_position;
-            part.current_position = self.head.last_position;
-            prev = Some(part);
+        let mut prev = self.head.last_position;
+        for part in self.body.iter_mut() {
+            let old_pos = part.current_position;
+            part.current_position = prev;
+            part.last_position = old_pos;
+            prev = old_pos;
+            continue;
         }
     }
 
@@ -134,13 +130,14 @@ impl Snake {
                     return AppState::Dead;
                 }
 
-                self.move_snake_body();
                 let alive = self
                     .set_head(
                         self.head.current_position.x,
                         self.head.current_position.y + 1.0,
                     )
                     .unwrap_or_else(|_| false);
+
+                self.move_snake_body();
 
                 if !alive {
                     return AppState::Dead;
@@ -153,13 +150,14 @@ impl Snake {
                 return AppState::Active;
             }
             Direction::Down => {
-                self.move_snake_body();
                 let alive = self
                     .set_head(
                         self.head.current_position.x,
                         self.head.current_position.y - 1.0,
                     )
                     .unwrap_or_else(|_| false);
+
+                self.move_snake_body();
 
                 if !alive {
                     return AppState::Dead;
@@ -176,13 +174,14 @@ impl Snake {
                     return AppState::Dead;
                 }
 
-                self.move_snake_body();
                 let alive = self
                     .set_head(
                         self.head.current_position.x - 1.0,
                         self.head.current_position.y,
                     )
                     .unwrap_or_else(|_| false);
+
+                self.move_snake_body();
 
                 if !alive {
                     return AppState::Dead;
@@ -195,13 +194,14 @@ impl Snake {
                 return AppState::Active;
             }
             Direction::Right => {
-                self.move_snake_body();
                 let alive = self
                     .set_head(
                         self.head.current_position.x + 1.0,
                         self.head.current_position.y,
                     )
                     .unwrap_or_else(|_| false);
+
+                self.move_snake_body();
 
                 if !alive {
                     return AppState::Dead;

@@ -207,25 +207,30 @@ impl Widget for &mut App {
                 ctx.layer(); // Begin Foreground
                 ctx.marker(Marker::HalfBlock);
 
-                ctx.draw(&Line {
+                ctx.draw(&Rectangle {
                     // Head
-                    x1: self.snake.head.current_position.x,
-                    x2: self.snake.head.current_position.x,
+                    x: self.snake.head.current_position.x,
+                    // x2: self.snake.head.current_position.x,
 
-                    y1: self.snake.head.current_position.y,
-                    y2: self.snake.head.current_position.y,
+                    y: self.snake.head.current_position.y,
+                    // y2: self.snake.head.current_position.y,
+
+                    width: 1.0,
+                    height: 1.0,
 
                     color: Color::Red,
                 });
 
                 for part in self.snake.body.iter() {
-                    ctx.draw(&Line {
-                        x1: part.current_position.x,
-                        x2: part.current_position.x,
+                    ctx.draw(&Rectangle {
+                        x: part.current_position.x,
+                        // x2: part.current_position.x,
 
-                        y1: part.current_position.y,
-                        y2: part.current_position.y,
+                        y: part.current_position.y,
+                        // y2: part.current_position.y,
 
+                        width: 1.0,
+                        height: 1.0,
                         color: Color::Blue,
                     });
                 }
