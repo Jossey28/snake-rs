@@ -1,41 +1,44 @@
 use ratatui::Frame;
-use ratatui::layout::Layout;
+use ratatui::layout::Alignment;
 use ratatui::layout::Constraint;
+use ratatui::layout::Layout;
+use ratatui::layout::Rect;
+use ratatui::layout::VerticalAlignment;
 use ratatui::style::Style;
 
+use ratatui::text::Line;
+use ratatui::widgets::Paragraph;
 use tui_big_text::BigText;
 use tui_big_text::PixelSize;
 
 use ratatui::prelude::Stylize;
 
-pub fn show_title(frame: &mut Frame) -> ()  {
-        let verticle_chunks = Layout::default()
-            .direction(ratatui::layout::Direction::Vertical)
-            .constraints([
-                Constraint::Ratio(1, 3),
-                Constraint::Fill(1),
-                Constraint::Ratio(1, 3),
-            ]).split(frame.area());
+pub fn show_title(frame: &mut Frame, area: Rect) -> () {
+    let style = Style::new().bold();
 
-        let horizontal_chunks = Layout::default()
-            .direction(ratatui::layout::Direction::Horizontal)
-            .constraints([
-                Constraint::Ratio(1, 3),
-                Constraint::Fill(1),
-                Constraint::Ratio(1, 3),
-            ]).split(verticle_chunks[1]);
+    let text = BigText::builder()
+        .pixel_size(PixelSize::Full) // See if I can make it full width. It cuts out atm
+        .style(style)
+        .lines(vec!["Snake-Rs".red().into()])
+        .alignment(Alignment::Center)
+        .build();
 
-        let style = Style::new() 
-            .bold();
+    frame.render_widget(text, area);
+}
 
+pub fn display_menu_title(frame: &mut Frame, area: Rect) -> () {
+    // let top_text = Line::from("value").bold().alignment(Alignment::Center);
+    let text = BigText::builder()
+        .pixel_size(PixelSize::Octant) // See if I can make it full width. It cuts out atm
+        // .style(style)
+        .lines(vec!["Click tab to switch tabs".gray().into()])
+        .alignment(Alignment::Center)
+        .build();
 
-        let text = BigText::builder()
-                .pixel_size(PixelSize::HalfWidth) // See if I can make it full width. It cuts out atm 
-                .style(style)
-                .lines(vec![
-                    "Snake-Rs".red().into(),
-                ])
-                .build();
+    frame.render_widget(text, area);
+}
+pub fn display_menu(frame: &mut Frame, area: Rect) -> () {
+    let menu = Paragraph::new("imagine menu").alignment(Alignment::Center);
 
-        frame.render_widget(text, horizontal_chunks[1]);
-    }
+    frame.render_widget(menu, area);
+}

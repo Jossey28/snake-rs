@@ -2,23 +2,30 @@ mod event_handler;
 mod game_logic;
 mod ui;
 
-use std::time::Instant;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use color_eyre::eyre::Result;
 use crossterm::event::{KeyCode, KeyEvent};
 
-use ratatui::layout::Position;
+use ratatui::layout::{Constraint, Layout, Offset, Position};
+use ratatui::style::Color;
+use ratatui::symbols::Marker;
+use ratatui::widgets::Widget;
+use ratatui::widgets::canvas::{Canvas, Line, Map, MapResolution, Points, Rectangle};
 use ratatui::{DefaultTerminal, Frame};
 
 use crate::event_handler::{GameEvent, GameEventHandler};
-use crate::game_logic::{Direction, Snake, Food, GlobalSettings};
+use crate::game_logic::{Direction, Food, Snake};
 
 fn main() -> Result<()> {
     color_eyre::install()?;
 
     let mut terminal = ratatui::init();
     let mut app = App::default();
-    let events = GameEventHandler::new(app.settings.tick_rate);
+
+    let tick_rate = Duration::from_millis(50);
+    let events = GameEventHandler::new(tick_rate);
     let app_result = app.run(&mut terminal, events);
 
     ratatui::restore();
@@ -32,7 +39,9 @@ pub struct App {
     food: Food,
 
     snake: Snake,
-    settings: GlobalSettings,
+
+    screen_width: u16,
+    screen_height: u16,
 
     last_tick: Option<Instant>,
 }
@@ -62,8 +71,8 @@ impl App {
                 GameEvent::Tick => {
                     if self.appstate == AppState::Active {
                         let food = &self.food;
-                        let app_state = self.snake.move_snake(food.into());
-                        self.appstate = app_state;
+                        // let app_state = self.snake.move_snake(food.into());
+                        // self.appstate = app_state;
                     }
                 }
                 GameEvent::Key(key_event) => self.handle_key_event(key_event)?,
@@ -75,27 +84,39 @@ impl App {
         Ok(())
     }
 
-    fn handle_collision(&mut self) {    
-        self.food = Food::from((fastrand::u16(0..self.settings.terminal_width), fastrand::u16(0..self.settings.terminal_height)));
+    fn handle_collision(&mut self) {
+        // self.food = Food::from((
+        //     fastrand::u16(0..self.screen_width),
+        //     fastrand::u16(0..self.screen_height),
+        // ));
         self.appstate = AppState::Active;
-    } 
+    }
 
     fn exit(&mut self) {
         self.exit = true;
     }
 
     fn draw(&mut self, frame: &mut Frame) {
-        self.settings.terminal_height = frame.area().height;
-        self.settings.terminal_width = frame.area().width;
+        self.screen_height = frame.area().height;
+        self.screen_width = frame.area().width;
 
         match self.appstate {
-            AppState::TitleScreen => ui::show_title(frame),
-            AppState::Dead => ui::show_title(frame),
+            AppState::TitleScreen | AppState::Dead => {
+                let area = Layout::vertical([Constraint::Fill(1), Constraint::Fill(1)])
+                    .split(frame.area());
+
+                ui::show_title(frame, area[0]);
+                ui::display_menu_title(frame, area[1]);
+                ui::display_menu(frame, area[1] + Offset::new(0, 2));
+            }
             AppState::Active => {
-                frame.render_widget(&self.snake, frame.area());
-                frame.render_widget(&self.food, frame.area());
-                },
-            AppState::Coliding => self.handle_collision(),
+                frame.render_widget(self, frame.area());
+            }
+            _ => {} // AppState::Active => {
+                    //     frame.render_widget(&self.snake, frame.area());
+                    //     frame.render_widget(&self.food, frame.area());
+                    // }
+                    // AppState::Coliding => self.handle_collision(),
         }
     }
 
@@ -105,23 +126,133 @@ impl App {
     }
 
     fn handle_key_event(&mut self, key_event: KeyEvent) -> Result<()> {
-        let active = {
-            self.appstate == AppState::Active
-        };
+        let active = { self.appstate == AppState::Active };
 
         match key_event.code {
             KeyCode::Enter if !active => self.start_game(),
             KeyCode::Char('q') if active => self.appstate = AppState::TitleScreen,
             KeyCode::Esc => self.exit(),
 
-            KeyCode::Char('w') | KeyCode::Up if active => self.snake.change_direction(Direction::Up),
-            KeyCode::Char('a') | KeyCode::Left if active => self.snake.change_direction(Direction::Left),
-            KeyCode::Char('s') | KeyCode::Down if active => self.snake.change_direction(Direction::Down),
-            KeyCode::Char('d') | KeyCode::Right if active => self.snake.change_direction(Direction::Right),
+            KeyCode::Char('w') | KeyCode::Up if active => {
+                // self.snake.change_direction(Direction::Up)
+                self.snake.head.y += 1.0;
+            }
+            KeyCode::Char('a') | KeyCode::Left if active => {
+                // self.snake.change_direction(Direction::Left)
+                self.snake.head.x -= 1.0;
+            }
+            KeyCode::Char('s') | KeyCode::Down if active => {
+                // self.snake.change_direction(Direction::Down)
+                self.snake.head.y -= 1.0;
+            }
+            KeyCode::Char('d') | KeyCode::Right if active => {
+                // self.snake.change_direction(Direction::Right)
+                self.snake.head.x += 1.0;   
+            }
 
-            _ => {},
+            _ => {}
         };
 
         Ok(())
+    }
+}
+
+impl Widget for &mut App {
+    fn render(self, area: ratatui::prelude::Rect, buf: &mut ratatui::prelude::Buffer)
+    where
+        Self: Sized,
+    {
+        let aspect_ratio = (area.height as f64 * 2.0) / area.width as f64;
+        let x_max = 100.0;
+        let y_max = x_max * aspect_ratio;
+
+        let bg_canvas = Canvas::default()
+            .x_bounds([0.0, x_max])
+            .y_bounds([0.0, y_max])
+            .marker(Marker::Dot)
+            .paint(move |ctx| {
+                ctx.draw(&Line {
+                    // Top Bar
+                    x1: x_max,
+                    y1: y_max,
+                    x2: 0.0,
+                    y2: y_max,
+                    color: Color::Green,
+                });
+
+                ctx.draw(&Line {
+                    // Bottom Bar
+                    x1: x_max,
+                    y1: 0.0,
+                    x2: 0.0,
+                    y2: 0.0,
+                    color: Color::Green,
+                });
+
+                ctx.draw(&Line {
+                    // Left Bar
+                    x1: 0.0,
+                    y1: y_max,
+                    x2: 0.0,
+                    y2: 0.0,
+                    color: Color::Green,
+                });
+
+                ctx.draw(&Line {
+                    // Right Bar
+                    x1: x_max,
+                    y1: 0.0,
+                    x2: x_max,
+                    y2: y_max,
+                    color: Color::Green,
+                });
+
+                ctx.layer(); // Begin Foreground
+
+                ctx.draw(&Line { // Head
+                    x1: self.snake.head.x,
+                    x2: self.snake.head.x,
+
+                    y1: self.snake.head.y,
+                    y2: self.snake.head.y,
+                    
+                    color: Color::Red,
+                });
+
+                for (i, part) in self.snake.body.iter().enumerate() {
+                    ctx.draw(&Line {
+                        x1: part.current_position.x,
+                        x2: part.current_position.x,
+
+                        y1: part.current_position.y,
+                        y2: part.current_position.y,
+
+                        color: Color::Blue
+                    });
+                }
+
+            });
+
+        // let fg_canvas = Canvas::default()
+        //     .x_bounds([0.0, x_max])
+        //     .y_bounds([0.0, y_max])
+        //     .marker(Marker::Dot)
+        //     .paint(|ctx| {
+        //         ctx.draw(&Line { // Head
+        //             x1: self.snake.head.x,
+        //             y1: self.snake.head.y,
+        //             x2: self.snake.head.x,
+        //             // x2: self.snake.head.x + 1.0,
+        //             y2: self.snake.head.y,
+        //             // width: 1.0,
+        //             // height: 1.0,
+        //             color: Color::Red,
+        //         });
+
+                
+        //     });
+
+        bg_canvas.render(area, buf);
+        // fg_canvas.render(area, buf);
     }
 }

@@ -7,6 +7,7 @@ use ratatui::layout::Position;
 use ratatui::layout::Rect;
 use ratatui::style::Color;
 use ratatui::widgets::Widget;
+use ratatui::widgets::canvas::Canvas;
 
 use crate::App;
 use crate::AppState;
@@ -20,20 +21,20 @@ pub enum Direction {
     Right,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct Food {
-    x: u16,
-    y: u16,
+    x: f64,
+    y: f64,
 }
 
 impl Default for Food {
     fn default() -> Self {
-        Food { x: 10, y: 10 }
+        Food { x: 10.0, y: 10.0 }
     }
 }
 
-impl From<(u16, u16)> for Food {
-    fn from(value: (u16, u16)) -> Self {
+impl From<(f64, f64)> for Food {
+    fn from(value: (f64, f64)) -> Self {
         let x = value.0;
         let y = value.1;
 
@@ -41,66 +42,91 @@ impl From<(u16, u16)> for Food {
     }
 }
 
-impl Into<Position> for &Food {
-    fn into(self) -> Position {
-        Position {
-            x: self.x,
-            y: self.y,
-        }
+// impl Into<Position> for &Food {
+//     fn into(self) -> Position {
+//         Position {
+//             x: self.x as u16,
+//             y: self.y as u16,
+//         }
+//     }
+// }
+
+// impl Widget for &Food {
+//     fn render(self, area: Rect, buf: &mut ratatui::prelude::Buffer)
+//     where
+//         Self: Sized,
+//     {
+//         if self.x >= area.right().into() || self.y >= area.bottom().into() {
+//             return;
+//         }
+
+//         let food_pos: Position = self.into();
+//         let food_location = buf.cell_mut(food_pos).expect("invalid food position");
+
+//         let is_top_pixel = self.y % 2 == 0;
+//         if is_top_pixel {
+//             let bottom_color = if food_location.symbol() == "▄" {
+//                 food_location.fg
+//             } else {
+//                 Color::Reset
+//             };
+
+//             food_location.set_char('▀');
+//             food_location.set_fg(Color::Red);
+//             food_location.set_bg(bottom_color);
+//         } else {
+//             let top_color = if food_location.symbol() == "▀" {
+//                 food_location.fg
+//             } else {
+//                 Color::Reset
+//             };
+
+//             food_location.set_char('▀');
+//             food_location.set_fg(Color::Red);
+//             food_location.set_bg(top_color);
+//         }
+//     }
+// }
+#[derive(Debug, Clone, Copy)]
+pub struct CanvasPosition {
+    pub x: f64,
+    pub y: f64,
+}
+
+#[derive(Debug, Clone)]
+pub struct SnakeBody {
+    pub current_position: CanvasPosition,
+    pub last_position: CanvasPosition,
+}
+
+impl SnakeBody {
+    fn new(current_position: CanvasPosition, last_position: CanvasPosition) -> Self {
+        Self { current_position, last_position}
     }
 }
 
-impl Widget for &Food {
-    fn render(self, area: Rect, buf: &mut ratatui::prelude::Buffer)
-    where
-        Self: Sized,
-    {
-        if self.x >= area.right() || self.y >= area.bottom() {
-            return;
-        }
-
-        let food_pos: Position = self.into();
-        let food_location = buf.cell_mut(food_pos).expect("invalid food position");
-
-        let is_top_pixel = self.y % 2 == 0;
-        if is_top_pixel {
-            let bottom_color = if food_location.symbol() == "▄" {
-                food_location.fg
-            } else {
-                Color::Reset
-            };
-
-            food_location.set_char('▀');
-            food_location.set_fg(Color::Red);
-            food_location.set_bg(bottom_color);
-        } else {
-            let top_color = if food_location.symbol() == "▀" {
-                food_location.fg
-            } else {
-                Color::Reset
-            };
-
-            food_location.set_char('▀');
-            food_location.set_fg(Color::Red);
-            food_location.set_bg(top_color);
-        }
+impl CanvasPosition {
+    fn new(x: f64, y: f64) -> Self {
+        Self { x, y }
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct Snake {
-    pub head: Position,
-    body: Option<Vec<Position>>,
-    tail: Option<Position>,
+    pub head: CanvasPosition,
+    pub body: Vec<SnakeBody>,
     pub direction: Direction,
 }
 
 impl Default for Snake {
     fn default() -> Self {
+        let head = CanvasPosition::new(5.0, 5.0);
+        let first_piece = SnakeBody::new(CanvasPosition::new(head.x -1.0 , head.y), CanvasPosition::new(head.x - 1.0, head.y));
+        let second_piece = SnakeBody::new(CanvasPosition::new(head.x - 2.0, head.y), CanvasPosition::new(head.x - 2.0, head.y));
+
         Snake {
-            head: Position { x: 5, y: 5 },
-            body: None,
-            tail: None,
+            head: head,
+            body: vec![first_piece, second_piece],
             direction: Direction::Down,
         }
     }
@@ -129,15 +155,15 @@ impl Snake {
         self.direction = target_direction;
     }
 
-    pub fn move_snake(&mut self, food_location: Position) -> AppState {
+    pub fn move_snake(&mut self, food_location: Food) -> AppState {
         match self.direction {
             Direction::Up => {
-                if self.head.y == 0 {
+                if self.head.y < 1.0 {
                     return AppState::Dead;
                 }
 
                 let alive = self
-                    .set_head(self.head.x, self.head.y - 1)
+                    .set_head(self.head.x, self.head.x - 1.0)
                     .unwrap_or_else(|_| false);
 
                 if !alive {
@@ -152,7 +178,7 @@ impl Snake {
             }
             Direction::Down => {
                 let alive = self
-                    .set_head(self.head.x, self.head.y + 1)
+                    .set_head(self.head.x, self.head.x + 1.0)
                     .unwrap_or_else(|_| false);
 
                 if !alive {
@@ -166,12 +192,12 @@ impl Snake {
                 return AppState::Active;
             }
             Direction::Left => {
-                if self.head.x == 0 {
+                if self.head.x < 1.0 {
                     return AppState::Dead;
                 }
 
                 let alive = self
-                    .set_head(self.head.x - 1, self.head.y)
+                    .set_head(self.head.x - 1.0, self.head.y)
                     .unwrap_or_else(|_| false);
 
                 if !alive {
@@ -186,7 +212,7 @@ impl Snake {
             }
             Direction::Right => {
                 let alive = self
-                    .set_head(self.head.x + 1, self.head.y)
+                    .set_head(self.head.x + 1.0, self.head.y)
                     .unwrap_or_else(|_| false);
 
                 if !alive {
@@ -202,13 +228,13 @@ impl Snake {
         }
     }
 
-    fn is_at_food(&self, food_pos: Position) -> bool {
-        let coliding = { self.head == food_pos };
+    fn is_at_food(&self, food_pos: Food) -> bool {
+        let coliding = { self.head.x == food_pos.x && self.head.y == food_pos.y };
 
         return coliding;
     }
 
-    fn set_head(&mut self, x: u16, y: u16) -> Result<bool> {
+    fn set_head(&mut self, x: f64, y: f64) -> Result<bool> {
         // Figure out a way to verify its a valid positition in the future w/ idomatic rust w/o adding additional argument
         // https://users.rust-lang.org/t/current-best-practice-for-parent-child-struct-relationship/84542/3
         // https://www.sitepoint.com/rust-global-variables/
@@ -219,51 +245,33 @@ impl Snake {
         Ok(true)
     }
 
-    fn get_head(&self) -> (u16, u16) {
+    fn get_head(&self) -> (f64, f64) {
         return (self.head.x, self.head.y);
     }
 }
 
-impl Widget for &Snake {
-    fn render(self, area: Rect, buf: &mut ratatui::prelude::Buffer)
-    where
-        Self: Sized,
-    {
-        let (x, y) = self.get_head();
-        if x >= area.right() || y >= area.bottom() {
-            return;
-        }
+// impl Widget for &Snake {
+//     fn render(self, area: Rect, buf: &mut ratatui::prelude::Buffer)
+//     where
+//         Self: Sized,
+//     {
+//         let (x, y) = self.get_head();
+//         if x >= area.right().into() || y >= area.bottom().into() {
+//             return;
+//         }
 
-        let snake_head = buf
-            .cell_mut(self.head)
-            .expect("invalid snake head position");
-        // snake_head.set_char('▀');
-        match self.direction {
-            Direction::Left => snake_head.set_char('◀'), // https://cloford.com/resources/charcodes/utf-8_geometric.htm
-            Direction::Right => snake_head.set_char('▶'), // Starting @ UTF8+9654
-            Direction::Up => snake_head.set_char('▲'),   // Or "BLACK UP-POINTING TRIANGLE"
-            Direction::Down => snake_head.set_char('▼'),
-        };
+//         let snake_head = buf
+//             .cell_mut(self.head)
+//             .expect("invalid snake head position");
+//         // snake_head.set_char('▀');
+//         match self.direction {
+//             Direction::Left => snake_head.set_char('◀'), // https://cloford.com/resources/charcodes/utf-8_geometric.htm
+//             Direction::Right => snake_head.set_char('▶'), // Starting @ UTF8+9654
+//             Direction::Up => snake_head.set_char('▲'),   // Or "BLACK UP-POINTING TRIANGLE"
+//             Direction::Down => snake_head.set_char('▼'),
+//         };
 
-        snake_head.set_fg(Color::Green);
-        snake_head.set_bg(Color::Reset);
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct GlobalSettings {
-    pub terminal_width: u16,
-    pub terminal_height: u16,
-
-    pub tick_rate: Duration,
-}
-
-impl Default for GlobalSettings {
-    fn default() -> Self {
-        GlobalSettings {
-            terminal_width: 0,
-            terminal_height: 0,
-            tick_rate: Duration::from_millis(50),
-        }
-    }
-}
+//         snake_head.set_fg(Color::Green);
+//         snake_head.set_bg(Color::Reset);
+//     }
+// }

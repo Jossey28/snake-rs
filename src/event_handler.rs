@@ -12,7 +12,8 @@ use std::time::Instant;
 use color_eyre::Result;
 
 #[derive(Debug, Clone, Copy)]
-pub enum GameEvent { // https://ratatui.rs/tutorials/counter-app/_multiple-files/event/#_top
+pub enum GameEvent {
+    // https://ratatui.rs/tutorials/counter-app/_multiple-files/event/#_top
     Tick,
     Key(KeyEvent),
     Mouse(MouseEvent),
@@ -20,8 +21,9 @@ pub enum GameEvent { // https://ratatui.rs/tutorials/counter-app/_multiple-files
 }
 
 #[derive(Debug)]
-pub struct GameEventHandler { // https://ratatui.rs/tutorials/counter-app/_multiple-files/event/#_top
-    // Event sender 
+pub struct GameEventHandler {
+    // https://ratatui.rs/tutorials/counter-app/_multiple-files/event/#_top
+    // Event sender
     #[allow(dead_code)]
     sender: mpsc::Sender<GameEvent>,
     reciever: mpsc::Receiver<GameEvent>,
@@ -40,23 +42,31 @@ impl GameEventHandler {
                 loop {
                     let timeout = tick_rate
                         .checked_sub(last_tick.elapsed())
-                        .unwrap_or(tick_rate); 
+                        .unwrap_or(tick_rate);
 
                     if event::poll(timeout).expect("Unable to poll for event") {
                         match event::read().expect("Unable to read event") {
                             Event::Key(e) => {
                                 if e.kind == event::KeyEventKind::Press {
-                                    sender.send(GameEvent::Key(e)).expect("Unable to send key event");
+                                    sender
+                                        .send(GameEvent::Key(e))
+                                        .expect("Unable to send key event");
                                 }
-                            },
-                            Event::Mouse(e) => sender.send(GameEvent::Mouse(e)).expect("Unable to send mouse event"),
-                            Event::Resize(w, h) => sender.send(GameEvent::Resize(w, h)).expect("Unable to send resize event"),
+                            }
+                            Event::Mouse(e) => sender
+                                .send(GameEvent::Mouse(e))
+                                .expect("Unable to send mouse event"),
+                            Event::Resize(w, h) => sender
+                                .send(GameEvent::Resize(w, h))
+                                .expect("Unable to send resize event"),
                             _ => {}
                         }
                     }
 
                     if last_tick.elapsed() >= tick_rate {
-                        sender.send(GameEvent::Tick).expect("Failed to send tick event");
+                        sender
+                            .send(GameEvent::Tick)
+                            .expect("Failed to send tick event");
                         last_tick = Instant::now();
                     }
                 }
