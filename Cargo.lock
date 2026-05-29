@@ -1503,6 +1503,7 @@ dependencies = [
  "color-eyre",
  "crossterm 0.29.0",
  "fastrand",
+ "itertools",
  "rand 0.10.1",
  "ratatui",
  "tui-big-text",

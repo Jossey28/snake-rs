@@ -1,12 +1,8 @@
 use ratatui::Frame;
 use ratatui::layout::Alignment;
-use ratatui::layout::Constraint;
-use ratatui::layout::Layout;
 use ratatui::layout::Rect;
-use ratatui::layout::VerticalAlignment;
 use ratatui::style::Style;
 
-use ratatui::text::Line;
 use ratatui::widgets::Paragraph;
 use tui_big_text::BigText;
 use tui_big_text::PixelSize;

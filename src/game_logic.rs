@@ -1,15 +1,7 @@
-use std::time::Duration;
-
 use color_eyre::Result;
 
 use color_eyre::eyre::Ok;
-use ratatui::layout::Position;
-use ratatui::layout::Rect;
-use ratatui::style::Color;
-use ratatui::widgets::Widget;
-use ratatui::widgets::canvas::Canvas;
 
-use crate::App;
 use crate::AppState;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
@@ -42,58 +34,13 @@ impl From<(f64, f64)> for Food {
     }
 }
 
-// impl Into<Position> for &Food {
-//     fn into(self) -> Position {
-//         Position {
-//             x: self.x as u16,
-//             y: self.y as u16,
-//         }
-//     }
-// }
-
-// impl Widget for &Food {
-//     fn render(self, area: Rect, buf: &mut ratatui::prelude::Buffer)
-//     where
-//         Self: Sized,
-//     {
-//         if self.x >= area.right().into() || self.y >= area.bottom().into() {
-//             return;
-//         }
-
-//         let food_pos: Position = self.into();
-//         let food_location = buf.cell_mut(food_pos).expect("invalid food position");
-
-//         let is_top_pixel = self.y % 2 == 0;
-//         if is_top_pixel {
-//             let bottom_color = if food_location.symbol() == "▄" {
-//                 food_location.fg
-//             } else {
-//                 Color::Reset
-//             };
-
-//             food_location.set_char('▀');
-//             food_location.set_fg(Color::Red);
-//             food_location.set_bg(bottom_color);
-//         } else {
-//             let top_color = if food_location.symbol() == "▀" {
-//                 food_location.fg
-//             } else {
-//                 Color::Reset
-//             };
-
-//             food_location.set_char('▀');
-//             food_location.set_fg(Color::Red);
-//             food_location.set_bg(top_color);
-//         }
-//     }
-// }
 #[derive(Debug, Clone, Copy)]
 pub struct CanvasPosition {
     pub x: f64,
     pub y: f64,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct SnakeBody {
     pub current_position: CanvasPosition,
     pub last_position: CanvasPosition,
@@ -101,7 +48,10 @@ pub struct SnakeBody {
 
 impl SnakeBody {
     fn new(current_position: CanvasPosition, last_position: CanvasPosition) -> Self {
-        Self { current_position, last_position}
+        Self {
+            current_position,
+            last_position,
+        }
     }
 }
 
@@ -113,7 +63,7 @@ impl CanvasPosition {
 
 #[derive(Debug, Clone)]
 pub struct Snake {
-    pub head: CanvasPosition,
+    pub head: SnakeBody,
     pub body: Vec<SnakeBody>,
     pub direction: Direction,
 }
@@ -121,11 +71,18 @@ pub struct Snake {
 impl Default for Snake {
     fn default() -> Self {
         let head = CanvasPosition::new(5.0, 5.0);
-        let first_piece = SnakeBody::new(CanvasPosition::new(head.x -1.0 , head.y), CanvasPosition::new(head.x - 1.0, head.y));
-        let second_piece = SnakeBody::new(CanvasPosition::new(head.x - 2.0, head.y), CanvasPosition::new(head.x - 2.0, head.y));
+        let first_piece = SnakeBody::new(
+            CanvasPosition::new(head.x - 1.0, head.y),
+            CanvasPosition::new(head.x - 1.0, head.y),
+        );
+
+        let second_piece = SnakeBody::new(
+            CanvasPosition::new(head.x - 2.0, head.y),
+            CanvasPosition::new(head.x - 2.0, head.y),
+        );
 
         Snake {
-            head: head,
+            head: SnakeBody::new(head, head),
             body: vec![first_piece, second_piece],
             direction: Direction::Down,
         }
@@ -155,15 +112,34 @@ impl Snake {
         self.direction = target_direction;
     }
 
-    pub fn move_snake(&mut self, food_location: Food) -> AppState {
+    fn move_snake_body(&mut self) {
+        let mut prev: Option<&mut SnakeBody> = None;
+        for mut part in self.body.iter_mut() {
+            if let Some(p) = prev.take() {
+                part.last_position = part.current_position;
+                part = p;
+                continue;
+            }
+
+            part.last_position = part.current_position;
+            part.current_position = self.head.last_position;
+            prev = Some(part);
+        }
+    }
+
+    pub fn move_snake_head(&mut self, food_location: Food) -> AppState {
         match self.direction {
             Direction::Up => {
-                if self.head.y < 1.0 {
+                if self.head.current_position.y < 1.0 {
                     return AppState::Dead;
                 }
 
+                self.move_snake_body();
                 let alive = self
-                    .set_head(self.head.x, self.head.x - 1.0)
+                    .set_head(
+                        self.head.current_position.x,
+                        self.head.current_position.y + 1.0,
+                    )
                     .unwrap_or_else(|_| false);
 
                 if !alive {
@@ -177,8 +153,12 @@ impl Snake {
                 return AppState::Active;
             }
             Direction::Down => {
+                self.move_snake_body();
                 let alive = self
-                    .set_head(self.head.x, self.head.x + 1.0)
+                    .set_head(
+                        self.head.current_position.x,
+                        self.head.current_position.y - 1.0,
+                    )
                     .unwrap_or_else(|_| false);
 
                 if !alive {
@@ -192,12 +172,16 @@ impl Snake {
                 return AppState::Active;
             }
             Direction::Left => {
-                if self.head.x < 1.0 {
+                if self.head.current_position.x < 1.0 {
                     return AppState::Dead;
                 }
 
+                self.move_snake_body();
                 let alive = self
-                    .set_head(self.head.x - 1.0, self.head.y)
+                    .set_head(
+                        self.head.current_position.x - 1.0,
+                        self.head.current_position.y,
+                    )
                     .unwrap_or_else(|_| false);
 
                 if !alive {
@@ -211,8 +195,12 @@ impl Snake {
                 return AppState::Active;
             }
             Direction::Right => {
+                self.move_snake_body();
                 let alive = self
-                    .set_head(self.head.x + 1.0, self.head.y)
+                    .set_head(
+                        self.head.current_position.x + 1.0,
+                        self.head.current_position.y,
+                    )
                     .unwrap_or_else(|_| false);
 
                 if !alive {
@@ -229,7 +217,9 @@ impl Snake {
     }
 
     fn is_at_food(&self, food_pos: Food) -> bool {
-        let coliding = { self.head.x == food_pos.x && self.head.y == food_pos.y };
+        let coliding = {
+            self.head.current_position.x == food_pos.x && self.head.current_position.y == food_pos.y
+        };
 
         return coliding;
     }
@@ -239,39 +229,15 @@ impl Snake {
         // https://users.rust-lang.org/t/current-best-practice-for-parent-child-struct-relationship/84542/3
         // https://www.sitepoint.com/rust-global-variables/
 
-        self.head.x = x;
-        self.head.y = y;
+        self.head.last_position = self.head.current_position;
+
+        self.head.current_position.x = x;
+        self.head.current_position.y = y;
 
         Ok(true)
     }
 
     fn get_head(&self) -> (f64, f64) {
-        return (self.head.x, self.head.y);
+        return (self.head.current_position.x, self.head.current_position.y);
     }
 }
-
-// impl Widget for &Snake {
-//     fn render(self, area: Rect, buf: &mut ratatui::prelude::Buffer)
-//     where
-//         Self: Sized,
-//     {
-//         let (x, y) = self.get_head();
-//         if x >= area.right().into() || y >= area.bottom().into() {
-//             return;
-//         }
-
-//         let snake_head = buf
-//             .cell_mut(self.head)
-//             .expect("invalid snake head position");
-//         // snake_head.set_char('▀');
-//         match self.direction {
-//             Direction::Left => snake_head.set_char('◀'), // https://cloford.com/resources/charcodes/utf-8_geometric.htm
-//             Direction::Right => snake_head.set_char('▶'), // Starting @ UTF8+9654
-//             Direction::Up => snake_head.set_char('▲'),   // Or "BLACK UP-POINTING TRIANGLE"
-//             Direction::Down => snake_head.set_char('▼'),
-//         };
-
-//         snake_head.set_fg(Color::Green);
-//         snake_head.set_bg(Color::Reset);
-//     }
-// }

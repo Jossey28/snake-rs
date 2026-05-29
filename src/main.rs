@@ -18,6 +18,8 @@ use ratatui::{DefaultTerminal, Frame};
 use crate::event_handler::{GameEvent, GameEventHandler};
 use crate::game_logic::{Direction, Food, Snake};
 
+use itertools::Itertools;
+
 fn main() -> Result<()> {
     color_eyre::install()?;
 
@@ -70,9 +72,8 @@ impl App {
             match events.next()? {
                 GameEvent::Tick => {
                     if self.appstate == AppState::Active {
-                        let food = &self.food;
-                        // let app_state = self.snake.move_snake(food.into());
-                        // self.appstate = app_state;
+                        let app_state = self.snake.move_snake_head(self.food);
+                        self.appstate = app_state;
                     }
                 }
                 GameEvent::Key(key_event) => self.handle_key_event(key_event)?,
@@ -134,20 +135,16 @@ impl App {
             KeyCode::Esc => self.exit(),
 
             KeyCode::Char('w') | KeyCode::Up if active => {
-                // self.snake.change_direction(Direction::Up)
-                self.snake.head.y += 1.0;
+                self.snake.change_direction(Direction::Up)
             }
             KeyCode::Char('a') | KeyCode::Left if active => {
-                // self.snake.change_direction(Direction::Left)
-                self.snake.head.x -= 1.0;
+                self.snake.change_direction(Direction::Left)
             }
             KeyCode::Char('s') | KeyCode::Down if active => {
-                // self.snake.change_direction(Direction::Down)
-                self.snake.head.y -= 1.0;
+                self.snake.change_direction(Direction::Down)
             }
             KeyCode::Char('d') | KeyCode::Right if active => {
-                // self.snake.change_direction(Direction::Right)
-                self.snake.head.x += 1.0;   
+                self.snake.change_direction(Direction::Right)
             }
 
             _ => {}
@@ -166,7 +163,7 @@ impl Widget for &mut App {
         let x_max = 100.0;
         let y_max = x_max * aspect_ratio;
 
-        let bg_canvas = Canvas::default()
+        let canvas = Canvas::default()
             .x_bounds([0.0, x_max])
             .y_bounds([0.0, y_max])
             .marker(Marker::Dot)
@@ -208,18 +205,20 @@ impl Widget for &mut App {
                 });
 
                 ctx.layer(); // Begin Foreground
+                ctx.marker(Marker::HalfBlock);
 
-                ctx.draw(&Line { // Head
-                    x1: self.snake.head.x,
-                    x2: self.snake.head.x,
+                ctx.draw(&Line {
+                    // Head
+                    x1: self.snake.head.current_position.x,
+                    x2: self.snake.head.current_position.x,
 
-                    y1: self.snake.head.y,
-                    y2: self.snake.head.y,
-                    
+                    y1: self.snake.head.current_position.y,
+                    y2: self.snake.head.current_position.y,
+
                     color: Color::Red,
                 });
 
-                for (i, part) in self.snake.body.iter().enumerate() {
+                for part in self.snake.body.iter() {
                     ctx.draw(&Line {
                         x1: part.current_position.x,
                         x2: part.current_position.x,
@@ -227,32 +226,11 @@ impl Widget for &mut App {
                         y1: part.current_position.y,
                         y2: part.current_position.y,
 
-                        color: Color::Blue
+                        color: Color::Blue,
                     });
                 }
-
             });
 
-        // let fg_canvas = Canvas::default()
-        //     .x_bounds([0.0, x_max])
-        //     .y_bounds([0.0, y_max])
-        //     .marker(Marker::Dot)
-        //     .paint(|ctx| {
-        //         ctx.draw(&Line { // Head
-        //             x1: self.snake.head.x,
-        //             y1: self.snake.head.y,
-        //             x2: self.snake.head.x,
-        //             // x2: self.snake.head.x + 1.0,
-        //             y2: self.snake.head.y,
-        //             // width: 1.0,
-        //             // height: 1.0,
-        //             color: Color::Red,
-        //         });
-
-                
-        //     });
-
-        bg_canvas.render(area, buf);
-        // fg_canvas.render(area, buf);
+        canvas.render(area, buf);
     }
 }
