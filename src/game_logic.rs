@@ -1,9 +1,3 @@
-use color_eyre::Result;
-
-use color_eyre::eyre::Ok;
-
-use crate::AppState;
-
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub enum Direction {
     #[default]
@@ -167,14 +161,6 @@ impl Snake {
         }
     }
 
-    fn is_at_food(&self, food_pos: Food) -> bool {
-        let coliding = {
-            self.head.current_position.x == food_pos.x && self.head.current_position.y == food_pos.y
-        };
-
-        return coliding;
-    }
-
     fn set_head(&mut self, x: f64, y: f64) {
         // Figure out a way to verify its a valid positition in the future w/ idomatic rust w/o adding additional argument
         // https://users.rust-lang.org/t/current-best-practice-for-parent-child-struct-relationship/84542/3
@@ -184,10 +170,6 @@ impl Snake {
 
         self.head.current_position.x = x;
         self.head.current_position.y = y;
-    }
-
-    pub fn get_head(&self) -> (f64, f64) {
-        return (self.head.current_position.x, self.head.current_position.y);
     }
 
     pub fn is_head_in_body(&self) -> bool {
@@ -200,4 +182,8 @@ impl Snake {
             self.body.last().unwrap().last_position,
         ));
     }
+}
+
+struct GameSettings {
+    
 }

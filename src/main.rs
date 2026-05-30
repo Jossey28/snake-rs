@@ -2,26 +2,21 @@ mod event_handler;
 mod game_logic;
 mod ui;
 
-use std::default;
-use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use color_eyre::eyre::Result;
 use crossterm::event::{KeyCode, KeyEvent};
 
-use rand::Rng;
-use rand::prelude::ThreadRng;
-use ratatui::layout::{Constraint, Layout, Offset, Position};
+use ratatui::layout::{Constraint, Layout, Offset};
 use ratatui::style::Color;
 use ratatui::symbols::Marker;
 use ratatui::widgets::Widget;
-use ratatui::widgets::canvas::{Canvas, Line, Map, MapResolution, Points, Rectangle};
+use ratatui::widgets::canvas::{Canvas, Line};
 use ratatui::{DefaultTerminal, Frame};
 
+use crate::AvailableTabs::Instructions;
 use crate::event_handler::{GameEvent, GameEventHandler};
 use crate::game_logic::{Direction, Food, Snake};
-
-use itertools::Itertools;
 
 fn main() -> Result<()> {
     color_eyre::install()?;
@@ -54,6 +49,26 @@ pub struct App {
     score: i64,
 
     last_tick: Option<Instant>,
+
+    current_tab: AvailableTabs,
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+pub enum AvailableTabs {
+    #[default]
+    Instructions = 0,
+    Settings = 1,
+    Credits = 2,
+}
+
+impl AvailableTabs {
+    fn next(self) -> Self {
+        match self {
+            AvailableTabs::Instructions => AvailableTabs::Settings,
+            AvailableTabs::Settings => AvailableTabs::Credits,
+            AvailableTabs::Credits => AvailableTabs::Instructions,
+        }
+    }
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
@@ -182,13 +197,13 @@ impl App {
         self.screen_width = frame.area().width;
 
         match self.appstate {
+            // TODO! Create a death counter with persistent scrore
             AppState::TitleScreen | AppState::Dead => {
                 let area = Layout::vertical([Constraint::Fill(1), Constraint::Fill(1)])
                     .split(frame.area());
 
                 ui::show_title(frame, area[0]);
-                ui::display_menu_title(frame, area[1]);
-                ui::display_menu(frame, area[1] + Offset::new(0, 2));
+                ui::display_menu(frame, area[1], self.current_tab);
             }
             AppState::Active => {
                 let vertical =
@@ -201,7 +216,6 @@ impl App {
                 ui::display_score(frame, top, self.score);
                 frame.render_widget(self, area);
             }
-            _ => {}
         }
     }
 
@@ -211,25 +225,32 @@ impl App {
     }
 
     fn handle_key_event(&mut self, key_event: KeyEvent) -> Result<()> {
-        let active = { self.appstate == AppState::Active };
+        if key_event.code == KeyCode::Esc {
+            self.exit();
+        }
 
-        match key_event.code {
-            KeyCode::Enter if !active => self.start_game(),
-            KeyCode::Char('q') if active => self.appstate = AppState::TitleScreen,
-            KeyCode::Esc => self.exit(),
+        match self.appstate {
+            AppState::Active => match key_event.code {
+                KeyCode::Char('q') => self.appstate = AppState::TitleScreen,
 
-            KeyCode::Char('w') | KeyCode::Up if active => {
-                self.snake.change_direction(Direction::Up)
-            }
-            KeyCode::Char('a') | KeyCode::Left if active => {
-                self.snake.change_direction(Direction::Left)
-            }
-            KeyCode::Char('s') | KeyCode::Down if active => {
-                self.snake.change_direction(Direction::Down)
-            }
-            KeyCode::Char('d') | KeyCode::Right if active => {
-                self.snake.change_direction(Direction::Right)
-            }
+                KeyCode::Char('w') | KeyCode::Up => self.snake.change_direction(Direction::Up),
+                KeyCode::Char('a') | KeyCode::Left => self.snake.change_direction(Direction::Left),
+                KeyCode::Char('s') | KeyCode::Down => self.snake.change_direction(Direction::Down),
+                KeyCode::Char('d') | KeyCode::Right => {
+                    self.snake.change_direction(Direction::Right)
+                }
+                _ => {}
+            },
+
+            AppState::TitleScreen => match key_event.code {
+                KeyCode::Enter => self.start_game(),
+
+                KeyCode::Tab => {
+                    self.current_tab = self.current_tab.next();
+                    // print!("tab: {:#?}", self.current_tab);
+                }
+                _ => {}
+            },
 
             _ => {}
         };

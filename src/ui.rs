@@ -1,13 +1,18 @@
 use ratatui::Frame;
 use ratatui::layout::Alignment;
 use ratatui::layout::Rect;
+use ratatui::style::Color;
 use ratatui::style::Style;
+use ratatui::symbols;
 use ratatui::text::{Line, Span};
 use ratatui::widgets::Paragraph;
+use ratatui::widgets::Tabs;
 use tui_big_text::BigText;
 use tui_big_text::PixelSize;
 
 use ratatui::prelude::Stylize;
+
+use crate::AvailableTabs;
 
 pub fn show_title(frame: &mut Frame, area: Rect) -> () {
     let style = Style::new().bold();
@@ -22,22 +27,21 @@ pub fn show_title(frame: &mut Frame, area: Rect) -> () {
     frame.render_widget(text, area);
 }
 
-pub fn display_menu_title(frame: &mut Frame, area: Rect) -> () {
-    // let top_text = Line::from("value").bold().alignment(Alignment::Center);
-    let text = BigText::builder()
-        .pixel_size(PixelSize::Octant) // See if I can make it full width. It cuts out atm
-        // .style(style)
-        .lines(vec!["Click tab to switch tabs".gray().into()])
-        .alignment(Alignment::Center)
-        .build();
+pub fn display_menu(frame: &mut Frame, area: Rect, tab: AvailableTabs) -> () {
+    let tabs = Tabs::new(vec!["Tab 1", "Tab 2", "Tab 3"])
+        .style(Color::White)
+        .highlight_style(Style::default().magenta().on_black().bold())
+        .select(tab as usize)
+        .divider(symbols::DOT)
+        .padding(" ", " ");
 
-    frame.render_widget(text, area);
+    frame.render_widget(tabs, area);
 }
 
-pub fn display_menu(frame: &mut Frame, area: Rect) -> () {
-    let menu = Paragraph::new("imagine menu").alignment(Alignment::Center);
-
-    frame.render_widget(menu, area);
+fn render_tabs(frame: &mut Frame, area: Rect, tab: AvailableTabs) {
+    match tab {
+        _ => todo!()
+    } 
 }
 
 pub fn display_score(frame: &mut Frame, area: Rect, count: i64) {
