@@ -29,7 +29,7 @@ fn main() -> Result<()> {
     let mut terminal = ratatui::init();
     let mut app: App = App::default();
 
-    let tick_rate = Duration::from_millis(50);
+    let tick_rate = Duration::from_millis(10);
     let events = GameEventHandler::new(tick_rate);
     let app_result = app.run(&mut terminal, events);
 
@@ -50,6 +50,8 @@ pub struct App {
 
     canvas_max_width: f64,
     canvas_max_height: f64,
+
+    score: i64,
 
     last_tick: Option<Instant>,
 }
@@ -150,7 +152,11 @@ impl App {
 
     fn handle_colision(&mut self, collision: CollisionType) {
         match collision {
-            CollisionType::Food => {self.regen_food(); self.snake.add_to_tail();},
+            CollisionType::Food => {
+                self.regen_food();
+                self.increment_score();
+                self.snake.add_to_tail();
+            }
             _ => self.appstate = AppState::Dead,
         }
     }
@@ -167,6 +173,10 @@ impl App {
         self.food.y = rand_y as f64;
     }
 
+    fn increment_score(&mut self) {
+        self.score += 1;
+    }
+
     fn draw(&mut self, frame: &mut Frame) {
         self.screen_height = frame.area().height;
         self.screen_width = frame.area().width;
@@ -181,7 +191,15 @@ impl App {
                 ui::display_menu(frame, area[1] + Offset::new(0, 2));
             }
             AppState::Active => {
-                frame.render_widget(self, frame.area());
+                let vertical =
+                    Layout::vertical([Constraint::Length(1), Constraint::Fill(1)]).spacing(1);
+                let horizontal = Layout::horizontal([Constraint::Percentage(100)]).spacing(1);
+
+                let [top, main] = frame.area().layout(&vertical);
+                let [area] = main.layout(&horizontal);
+
+                ui::display_score(frame, top, self.score);
+                frame.render_widget(self, area);
             }
             _ => {}
         }
@@ -287,7 +305,7 @@ impl Widget for &mut App {
                 });
 
                 ctx.layer(); // Begin Foreground
-                ctx.marker(Marker::Sextant);
+                ctx.marker(Marker::HalfBlock);
 
                 ctx.draw(&Line {
                     // Head

@@ -2,7 +2,7 @@ use ratatui::Frame;
 use ratatui::layout::Alignment;
 use ratatui::layout::Rect;
 use ratatui::style::Style;
-
+use ratatui::text::{Line, Span};
 use ratatui::widgets::Paragraph;
 use tui_big_text::BigText;
 use tui_big_text::PixelSize;
@@ -33,8 +33,18 @@ pub fn display_menu_title(frame: &mut Frame, area: Rect) -> () {
 
     frame.render_widget(text, area);
 }
+
 pub fn display_menu(frame: &mut Frame, area: Rect) -> () {
     let menu = Paragraph::new("imagine menu").alignment(Alignment::Center);
 
     frame.render_widget(menu, area);
+}
+
+pub fn display_score(frame: &mut Frame, area: Rect, count: i64) {
+    let title = Line::from_iter([
+        Span::from("Score: ").bold(),
+        Span::from(format!("{}", count).blue()),
+    ]);
+
+    frame.render_widget(title, area);
 }

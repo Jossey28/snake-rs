@@ -195,6 +195,9 @@ impl Snake {
     }
 
     pub fn add_to_tail(&mut self) {
-        todo!()
+        self.body.push(SnakeBody::new(
+            self.body.last().unwrap().last_position,
+            self.body.last().unwrap().last_position,
+        ));
     }
 }
