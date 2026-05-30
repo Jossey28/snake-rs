@@ -2,12 +2,15 @@ mod event_handler;
 mod game_logic;
 mod ui;
 
+use std::default;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use color_eyre::eyre::Result;
 use crossterm::event::{KeyCode, KeyEvent};
 
+use rand::Rng;
+use rand::prelude::ThreadRng;
 use ratatui::layout::{Constraint, Layout, Offset, Position};
 use ratatui::style::Color;
 use ratatui::symbols::Marker;
@@ -24,7 +27,7 @@ fn main() -> Result<()> {
     color_eyre::install()?;
 
     let mut terminal = ratatui::init();
-    let mut app = App::default();
+    let mut app: App = App::default();
 
     let tick_rate = Duration::from_millis(50);
     let events = GameEventHandler::new(tick_rate);
@@ -45,6 +48,9 @@ pub struct App {
     screen_width: u16,
     screen_height: u16,
 
+    canvas_max_width: f64,
+    canvas_max_height: f64,
+
     last_tick: Option<Instant>,
 }
 
@@ -54,7 +60,16 @@ pub enum AppState {
     TitleScreen,
     Active,
     Dead,
-    Coliding,
+}
+
+#[derive(PartialEq, Eq, Debug)]
+pub enum CollisionType {
+    Ceiling,
+    Floor,
+    LeftWall,
+    RightWall,
+    Food,
+    Body,
 }
 
 impl App {
@@ -72,8 +87,13 @@ impl App {
             match events.next()? {
                 GameEvent::Tick => {
                     if self.appstate == AppState::Active {
-                        let app_state = self.snake.move_snake_head(self.food);
-                        self.appstate = app_state;
+                        self.snake.move_snake_head();
+
+                        let coliding = self.check_colision();
+                        // print!("{:#?}", coliding);
+                        if coliding.is_some() {
+                            self.handle_colision(coliding.unwrap());
+                        }
                     }
                 }
                 GameEvent::Key(key_event) => self.handle_key_event(key_event)?,
@@ -85,16 +105,66 @@ impl App {
         Ok(())
     }
 
-    fn handle_collision(&mut self) {
-        // self.food = Food::from((
-        //     fastrand::u16(0..self.screen_width),
-        //     fastrand::u16(0..self.screen_height),
-        // ));
-        self.appstate = AppState::Active;
+    fn check_colision(&self) -> Option<CollisionType> {
+        if self.snake.head.current_position.x < 1.0 {
+            return Some(CollisionType::LeftWall);
+        }
+
+        if self.snake.head.current_position.x > self.canvas_max_width - 1.0 {
+            return Some(CollisionType::RightWall);
+        }
+
+        if self.snake.head.current_position.y < 1.0 {
+            return Some(CollisionType::Ceiling);
+        }
+
+        if self.snake.head.current_position.y > self.canvas_max_height - 1.0 {
+            return Some(CollisionType::Floor);
+        }
+
+        if self.snake.is_head_in_body() {
+            return Some(CollisionType::Body);
+        }
+
+        let eating_food: bool = {
+            let tolerance = 1.0;
+
+            let snake_x = self.snake.head.current_position.x;
+            let snake_y = self.snake.head.current_position.y;
+
+            let food_x = self.food.x;
+            let food_y = self.food.y;
+
+            if (snake_x - food_x).abs() < tolerance && (snake_y - food_y).abs() < tolerance {
+                true
+            } else {
+                false
+            }
+        };
+
+        if eating_food {
+            return Some(CollisionType::Food);
+        }
+        None
+    }
+
+    fn handle_colision(&mut self, collision: CollisionType) {
+        match collision {
+            CollisionType::Food => {self.regen_food(); self.snake.add_to_tail();},
+            _ => self.appstate = AppState::Dead,
+        }
     }
 
     fn exit(&mut self) {
         self.exit = true;
+    }
+
+    fn regen_food(&mut self) {
+        let rand_x: i64 = rand::random_range(0..self.canvas_max_width as i64);
+        let rand_y: i64 = rand::random_range(0..self.canvas_max_height as i64);
+
+        self.food.x = rand_x as f64;
+        self.food.y = rand_y as f64;
     }
 
     fn draw(&mut self, frame: &mut Frame) {
@@ -113,11 +183,7 @@ impl App {
             AppState::Active => {
                 frame.render_widget(self, frame.area());
             }
-            _ => {} // AppState::Active => {
-                    //     frame.render_widget(&self.snake, frame.area());
-                    //     frame.render_widget(&self.food, frame.area());
-                    // }
-                    // AppState::Coliding => self.handle_collision(),
+            _ => {}
         }
     }
 
@@ -159,9 +225,12 @@ impl Widget for &mut App {
     where
         Self: Sized,
     {
-        let aspect_ratio = (area.height as f64 * 2.0) / area.width as f64;
-        let x_max = 100.0;
-        let y_max = x_max * aspect_ratio;
+        let widget_aspect_ratio = (area.height as f64 * 2.0) / area.width as f64;
+        let x_max = 150.0;
+        let y_max = x_max * widget_aspect_ratio;
+
+        self.canvas_max_width = x_max;
+        self.canvas_max_height = y_max;
 
         let canvas = Canvas::default()
             .x_bounds([0.0, x_max])
@@ -204,33 +273,40 @@ impl Widget for &mut App {
                     color: Color::Green,
                 });
 
-                ctx.layer(); // Begin Foreground
+                ctx.layer();
                 ctx.marker(Marker::HalfBlock);
+                ctx.draw(&Line {
+                    // Apple
+                    x1: self.food.x,
+                    x2: self.food.x,
 
-                ctx.draw(&Rectangle {
+                    y1: self.food.y,
+                    y2: self.food.y,
+
+                    color: Color::LightYellow,
+                });
+
+                ctx.layer(); // Begin Foreground
+                ctx.marker(Marker::Sextant);
+
+                ctx.draw(&Line {
                     // Head
-                    x: self.snake.head.current_position.x,
-                    // x2: self.snake.head.current_position.x,
-
-                    y: self.snake.head.current_position.y,
-                    // y2: self.snake.head.current_position.y,
-
-                    width: 1.0,
-                    height: 1.0,
+                    x1: self.snake.head.current_position.x,
+                    x2: self.snake.head.current_position.x,
+                    y1: self.snake.head.current_position.y,
+                    y2: self.snake.head.current_position.y,
 
                     color: Color::Red,
                 });
 
                 for part in self.snake.body.iter() {
-                    ctx.draw(&Rectangle {
-                        x: part.current_position.x,
-                        // x2: part.current_position.x,
+                    ctx.draw(&Line {
+                        // Body points
+                        x1: part.current_position.x,
+                        x2: part.current_position.x,
+                        y1: part.current_position.y,
+                        y2: part.current_position.y,
 
-                        y: part.current_position.y,
-                        // y2: part.current_position.y,
-
-                        width: 1.0,
-                        height: 1.0,
                         color: Color::Blue,
                     });
                 }

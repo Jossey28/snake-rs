@@ -6,7 +6,6 @@ edition = "2024"
 [dependencies]
 color-eyre = "0.6.5"
 crossterm = "0.29.0"
-fastrand = "2.4.1"
 itertools = "0.14.0"
 rand = "0.10.1"
 ratatui = { version = "0.30.0", features = ["serde"] }

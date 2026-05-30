@@ -13,10 +13,10 @@ pub enum Direction {
     Right,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Food {
-    x: f64,
-    y: f64,
+    pub x: f64,
+    pub y: f64,
 }
 
 impl Default for Food {
@@ -34,13 +34,13 @@ impl From<(f64, f64)> for Food {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct CanvasPosition {
     pub x: f64,
     pub y: f64,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct SnakeBody {
     pub current_position: CanvasPosition,
     pub last_position: CanvasPosition,
@@ -61,6 +61,12 @@ impl CanvasPosition {
     }
 }
 
+impl Into<(f64, f64)> for CanvasPosition {
+    fn into(self) -> (f64, f64) {
+        (self.x, self.y)
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Snake {
     pub head: SnakeBody,
@@ -70,20 +76,21 @@ pub struct Snake {
 
 impl Default for Snake {
     fn default() -> Self {
-        let head = CanvasPosition::new(5.0, 5.0);
-        let first_piece = SnakeBody::new(
-            CanvasPosition::new(head.x - 1.0, head.y),
-            CanvasPosition::new(head.x - 1.0, head.y),
-        );
+        let head = CanvasPosition::new(20.0, 5.0);
 
-        let second_piece = SnakeBody::new(
-            CanvasPosition::new(head.x - 2.0, head.y),
-            CanvasPosition::new(head.x - 2.0, head.y),
-        );
+        let body_parts: Vec<SnakeBody> = {
+            let mut tmp: Vec<SnakeBody> = vec![];
+
+            for (_index, val) in (0..10).enumerate() {
+                let pos = CanvasPosition::new(head.x - (val as f64), head.y);
+                tmp.push(SnakeBody::new(pos, pos));
+            }
+            tmp
+        };
 
         Snake {
             head: SnakeBody::new(head, head),
-            body: vec![first_piece, second_piece],
+            body: body_parts,
             direction: Direction::Right,
         }
     }
@@ -123,95 +130,39 @@ impl Snake {
         }
     }
 
-    pub fn move_snake_head(&mut self, food_location: Food) -> AppState {
+    pub fn move_snake_head(&mut self) {
         match self.direction {
             Direction::Up => {
-                if self.head.current_position.y < 1.0 {
-                    return AppState::Dead;
-                }
-
-                let alive = self
-                    .set_head(
-                        self.head.current_position.x,
-                        self.head.current_position.y + 1.0,
-                    )
-                    .unwrap_or_else(|_| false);
-
                 self.move_snake_body();
 
-                if !alive {
-                    return AppState::Dead;
-                }
-
-                if self.is_at_food(food_location) {
-                    return AppState::Coliding;
-                }
-
-                return AppState::Active;
+                self.set_head(
+                    self.head.current_position.x,
+                    self.head.current_position.y + 1.0,
+                );
             }
             Direction::Down => {
-                let alive = self
-                    .set_head(
-                        self.head.current_position.x,
-                        self.head.current_position.y - 1.0,
-                    )
-                    .unwrap_or_else(|_| false);
-
                 self.move_snake_body();
 
-                if !alive {
-                    return AppState::Dead;
-                }
-
-                if self.is_at_food(food_location) {
-                    return AppState::Coliding;
-                }
-
-                return AppState::Active;
+                self.set_head(
+                    self.head.current_position.x,
+                    self.head.current_position.y - 1.0,
+                );
             }
             Direction::Left => {
-                if self.head.current_position.x < 1.0 {
-                    return AppState::Dead;
-                }
-
-                let alive = self
-                    .set_head(
-                        self.head.current_position.x - 1.0,
-                        self.head.current_position.y,
-                    )
-                    .unwrap_or_else(|_| false);
-
                 self.move_snake_body();
 
-                if !alive {
-                    return AppState::Dead;
-                }
-
-                if self.is_at_food(food_location) {
-                    return AppState::Coliding;
-                }
-
-                return AppState::Active;
+                self.set_head(
+                    self.head.current_position.x - 1.0,
+                    self.head.current_position.y,
+                );
             }
             Direction::Right => {
-                let alive = self
-                    .set_head(
-                        self.head.current_position.x + 1.0,
-                        self.head.current_position.y,
-                    )
-                    .unwrap_or_else(|_| false);
-
                 self.move_snake_body();
 
-                if !alive {
-                    return AppState::Dead;
-                }
-
-                if self.is_at_food(food_location) {
-                    return AppState::Coliding;
-                }
-
-                return AppState::Active;
+                self.set_head(
+                    self.head.current_position.x + 1.0,
+                    self.head.current_position.y,
+                );
             }
         }
     }
@@ -224,7 +175,7 @@ impl Snake {
         return coliding;
     }
 
-    fn set_head(&mut self, x: f64, y: f64) -> Result<bool> {
+    fn set_head(&mut self, x: f64, y: f64) {
         // Figure out a way to verify its a valid positition in the future w/ idomatic rust w/o adding additional argument
         // https://users.rust-lang.org/t/current-best-practice-for-parent-child-struct-relationship/84542/3
         // https://www.sitepoint.com/rust-global-variables/
@@ -233,11 +184,17 @@ impl Snake {
 
         self.head.current_position.x = x;
         self.head.current_position.y = y;
-
-        Ok(true)
     }
 
-    fn get_head(&self) -> (f64, f64) {
+    pub fn get_head(&self) -> (f64, f64) {
         return (self.head.current_position.x, self.head.current_position.y);
+    }
+
+    pub fn is_head_in_body(&self) -> bool {
+        self.body.contains(&self.head)
+    }
+
+    pub fn add_to_tail(&mut self) {
+        todo!()
     }
 }
