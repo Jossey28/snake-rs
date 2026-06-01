@@ -15,13 +15,11 @@ use ratatui::widgets::Borders;
 use ratatui::widgets::Padding;
 use ratatui::widgets::Paragraph;
 use ratatui::widgets::Tabs;
-use ratatui::widgets::Widget;
 use tui_big_text::BigText;
 use tui_big_text::PixelSize;
 
 use ratatui::prelude::Stylize;
 
-use crate::App;
 use crate::AvailableTabs;
 use crate::game_logic::GameSettings;
 
@@ -94,26 +92,17 @@ fn instruction_tab(frame: &mut Frame, area: Rect) {
 }
 
 fn settings_tab(frame: &mut Frame, area: Rect, state: &mut GameSettings) {
-    let [header, content] = Layout::vertical([Constraint::Fill(1), Constraint::Fill(1)]).areas(area);
+    let outer = Block::bordered()
+        .title("Settings")
+        .border_type(BorderType::Rounded);
 
-    let lines = Text::from_iter([Span::from("Settings stuff").bold().cyan()]);
+    let [header, content] =
+        Layout::vertical([Constraint::Fill(1), Constraint::Fill(1)]).areas(outer.inner(area));
 
-    let title = Paragraph::new(" Settings Menu ").style(
-        Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
-    ).block(Block::bordered());
+    
 
-    let block = Paragraph::new(lines)
-        .alignment(Alignment::Center)
-        .block(
-            Block::bordered()
-                .padding(Padding::new(0, 0, (area.height / 2) - 3, 0))
-                .borders(Borders::ALL)
-                .border_type(BorderType::Rounded)
-        )
-        .style(Style::new().white());
-
-        frame.render_widget(title, header);
-    frame.render_widget(block, content);
+    frame.render_widget(outer, area);
+    
 }
 
 fn credits_tab(frame: &mut Frame, area: Rect) {
