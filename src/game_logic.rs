@@ -1,3 +1,7 @@
+use std::time::Duration;
+
+use ratatui::{style::Color, widgets::StatefulWidget};
+
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub enum Direction {
     #[default]
@@ -173,7 +177,20 @@ impl Snake {
     }
 
     pub fn is_head_in_body(&self) -> bool {
-        self.body.contains(&self.head)
+        let tolerance = 1.0;
+
+        let head_x = self.head.current_position.x.clone();
+        let head_y = self.head.current_position.y.clone();
+
+        for part in self.body.iter() {
+            if (part.current_position.x - head_x).abs() < tolerance
+                && (part.current_position.y - head_y).abs() < tolerance
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     pub fn add_to_tail(&mut self) {
@@ -184,6 +201,49 @@ impl Snake {
     }
 }
 
-struct GameSettings {
+#[derive(Debug, Clone)]
+pub struct GameSettings {
+    pub active_row: usize,
 
+    pub name: String,
+    pub highscore: u64,
+
+    pub invisible: bool,
+
+    pub tick_rate: Duration,
+
+    pub head_color: Color,
+    pub body_color: Color,
+    pub wall_color: Color,
+    pub food_color: Color,
+}
+
+impl Default for GameSettings {
+    fn default() -> Self {
+        GameSettings {
+            active_row: 0,
+
+            name: String::from("unnamed"),
+            highscore: 0,
+
+            invisible: false,
+
+            tick_rate: Duration::from_millis(10),
+
+            head_color: Color::Red,
+            body_color: Color::Blue,
+            wall_color: Color::Green,
+            food_color: Color::LightYellow,
+        }
+    }
+}
+
+impl GameSettings {
+    pub const TOTAL_ROWS: usize = 8;
+
+    pub fn move_down(&mut self) {
+        self.active_row = (self.active_row + 1) & Self::TOTAL_ROWS;
+    }
+
+    
 }

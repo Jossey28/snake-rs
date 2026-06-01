@@ -15,7 +15,7 @@ use ratatui::widgets::canvas::{Canvas, Line};
 use ratatui::{DefaultTerminal, Frame};
 
 use crate::event_handler::{GameEvent, GameEventHandler};
-use crate::game_logic::{Direction, Food, Snake};
+use crate::game_logic::{Direction, Food, GameSettings, Snake};
 
 fn main() -> Result<()> {
     color_eyre::install()?;
@@ -23,8 +23,7 @@ fn main() -> Result<()> {
     let mut terminal = ratatui::init();
     let mut app: App = App::default();
 
-    let tick_rate = Duration::from_millis(10);
-    let events = GameEventHandler::new(tick_rate);
+    let events = GameEventHandler::new(app.settings.tick_rate);
     let app_result = app.run(&mut terminal, events);
 
     ratatui::restore();
@@ -50,6 +49,8 @@ pub struct App {
     last_tick: Option<Instant>,
 
     current_tab: AvailableTabs,
+
+    settings: GameSettings,
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -179,8 +180,12 @@ impl App {
     }
 
     fn regen_food(&mut self) {
-        let rand_x: i64 = rand::random_range(0..self.canvas_max_width as i64);
-        let rand_y: i64 = rand::random_range(0..self.canvas_max_height as i64);
+        let safe_distance = 10;
+
+        let rand_x: i64 = rand::random_range(0..self.canvas_max_width as i64)
+            .clamp(0, self.canvas_max_width as i64 - safe_distance);
+        let rand_y: i64 = rand::random_range(0..self.canvas_max_height as i64)
+            .clamp(0, self.canvas_max_height as i64 - safe_distance);
 
         self.food.x = rand_x as f64;
         self.food.y = rand_y as f64;
@@ -283,7 +288,7 @@ impl Widget for &mut App {
                     y1: y_max,
                     x2: 0.0,
                     y2: y_max,
-                    color: Color::Green,
+                    color: self.settings.wall_color,
                 });
 
                 ctx.draw(&Line {
@@ -292,7 +297,7 @@ impl Widget for &mut App {
                     y1: 0.0,
                     x2: 0.0,
                     y2: 0.0,
-                    color: Color::Green,
+                    color: self.settings.wall_color,
                 });
 
                 ctx.draw(&Line {
@@ -301,7 +306,7 @@ impl Widget for &mut App {
                     y1: y_max,
                     x2: 0.0,
                     y2: 0.0,
-                    color: Color::Green,
+                    color: self.settings.wall_color,
                 });
 
                 ctx.draw(&Line {
@@ -310,7 +315,7 @@ impl Widget for &mut App {
                     y1: 0.0,
                     x2: x_max,
                     y2: y_max,
-                    color: Color::Green,
+                    color: self.settings.wall_color,
                 });
 
                 ctx.layer();
@@ -323,7 +328,7 @@ impl Widget for &mut App {
                     y1: self.food.y,
                     y2: self.food.y,
 
-                    color: Color::LightYellow,
+                    color: self.settings.food_color,
                 });
 
                 ctx.layer(); // Begin Foreground
@@ -336,7 +341,7 @@ impl Widget for &mut App {
                     y1: self.snake.head.current_position.y,
                     y2: self.snake.head.current_position.y,
 
-                    color: Color::Red,
+                    color: self.settings.head_color,
                 });
 
                 for part in self.snake.body.iter() {
@@ -347,7 +352,7 @@ impl Widget for &mut App {
                         y1: part.current_position.y,
                         y2: part.current_position.y,
 
-                        color: Color::Blue,
+                        color: self.settings.body_color,
                     });
                 }
             });

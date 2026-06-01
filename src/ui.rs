@@ -1,4 +1,3 @@
-use color_eyre::owo_colors::style;
 use ratatui::Frame;
 use ratatui::layout::Alignment;
 use ratatui::layout::Constraint;
@@ -11,17 +10,19 @@ use ratatui::text::Text;
 use ratatui::text::{Line, Span};
 use ratatui::widgets::Block;
 use ratatui::widgets::BorderType;
-use ratatui::widgets::BorderType::Rounded;
 use ratatui::widgets::Borders;
 use ratatui::widgets::Padding;
 use ratatui::widgets::Paragraph;
 use ratatui::widgets::Tabs;
+use ratatui::widgets::Widget;
 use tui_big_text::BigText;
 use tui_big_text::PixelSize;
 
 use ratatui::prelude::Stylize;
 
+use crate::App;
 use crate::AvailableTabs;
+use crate::game_logic::GameSettings;
 
 pub fn show_title(frame: &mut Frame, area: Rect) -> () {
     let [_, center, _] = Layout::vertical([
@@ -57,21 +58,25 @@ pub fn display_menu(frame: &mut Frame, area: Rect, tab: AvailableTabs) -> () {
 }
 
 pub fn display_tabs(frame: &mut Frame, area: Rect, tab: AvailableTabs) {
-    let lines = match tab {
-        AvailableTabs::Instructions => Text::from_iter([
-            Span::from("Hello! Welcome to my snake very own snake clone ;)")
-                .bold()
-                .green(),
-            Span::from("Click tab to view the other menus.")
-                .bold()
-                .cyan(),
-            Span::from("Click Enter to get started. Make sure to have fun!")
-                .bold()
-                .light_red(),
-        ]),
-        AvailableTabs::Settings => Text::from_iter([Span::from("Settings stuff").bold().cyan()]),
-        AvailableTabs::Credits => Text::from_iter([Span::from("Credits stuff").bold().dark_gray()]),
+    match tab {
+        AvailableTabs::Instructions => instruction_tab(frame, area),
+        AvailableTabs::Settings => settings_tab(frame, area),
+        AvailableTabs::Credits => credits_tab(frame, area),
     };
+}
+
+fn instruction_tab(frame: &mut Frame, area: Rect) {
+    let lines = Text::from_iter([
+        Span::from("Hello! Welcome to my snake very own snake clone ;)")
+            .bold()
+            .green(),
+        Span::from("Click tab to view the other menus.")
+            .bold()
+            .cyan(),
+        Span::from("Click Enter to get started. Make sure to have fun!")
+            .bold()
+            .light_red(),
+    ]);
 
     let block = Paragraph::new(lines)
         .alignment(Alignment::Center)
@@ -80,8 +85,43 @@ pub fn display_tabs(frame: &mut Frame, area: Rect, tab: AvailableTabs) {
                 .padding(Padding::new(0, 0, (area.height / 2) - 3, 0))
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
-                .border_style(Style::default().bg(Color::DarkGray))
-                .title("Title"),
+                .border_style(Style::default().bg(Color::LightRed))
+                .title("Instructions"),
+        )
+        .style(Style::new().white());
+
+    frame.render_widget(block, area);
+}
+
+fn settings_tab(frame: &mut Frame, area: Rect, state: &mut GameSettings) {
+    let lines = Text::from_iter([Span::from("Settings stuff").bold().cyan()]);
+
+    let block = Paragraph::new(lines)
+        .alignment(Alignment::Center)
+        .block(
+            Block::bordered()
+                .padding(Padding::new(0, 0, (area.height / 2) - 3, 0))
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().bg(Color::LightGreen))
+                .title("Settings"),
+        )
+        .style(Style::new().white());
+
+    frame.render_widget(block, area);
+}
+
+fn credits_tab(frame: &mut Frame, area: Rect) {
+    let lines = Text::from_iter([Span::from("Credits stuff").bold().dark_gray()]);
+    let block = Paragraph::new(lines)
+        .alignment(Alignment::Center)
+        .block(
+            Block::bordered()
+                .padding(Padding::new(0, 0, (area.height / 2) - 3, 0))
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().bg(Color::LightBlue))
+                .title("Credits"),
         )
         .style(Style::new().white());
 
