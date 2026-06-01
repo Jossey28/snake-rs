@@ -206,7 +206,7 @@ impl App {
                     .split(frame.area());
 
                 ui::show_title(frame, area[0]);
-                ui::display_tabs(frame, area[1] + Offset::new(0, 1), self.current_tab);
+                ui::display_tabs(frame, area[1] + Offset::new(0, 1), self.current_tab, &mut self.settings);
                 ui::display_menu(frame, area[1] + Offset::new(1, 0), self.current_tab);
             }
             AppState::Dead => {

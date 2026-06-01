@@ -4,6 +4,7 @@ use ratatui::layout::Constraint;
 use ratatui::layout::Layout;
 use ratatui::layout::Rect;
 use ratatui::style::Color;
+use ratatui::style::Modifier;
 use ratatui::style::Style;
 use ratatui::symbols;
 use ratatui::text::Text;
@@ -57,10 +58,10 @@ pub fn display_menu(frame: &mut Frame, area: Rect, tab: AvailableTabs) -> () {
     frame.render_widget(tabs, area);
 }
 
-pub fn display_tabs(frame: &mut Frame, area: Rect, tab: AvailableTabs) {
+pub fn display_tabs(frame: &mut Frame, area: Rect, tab: AvailableTabs, state: &mut GameSettings) {
     match tab {
         AvailableTabs::Instructions => instruction_tab(frame, area),
-        AvailableTabs::Settings => settings_tab(frame, area),
+        AvailableTabs::Settings => settings_tab(frame, area, state),
         AvailableTabs::Credits => credits_tab(frame, area),
     };
 }
@@ -85,7 +86,6 @@ fn instruction_tab(frame: &mut Frame, area: Rect) {
                 .padding(Padding::new(0, 0, (area.height / 2) - 3, 0))
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
-                .border_style(Style::default().bg(Color::LightRed))
                 .title("Instructions"),
         )
         .style(Style::new().white());
@@ -94,7 +94,13 @@ fn instruction_tab(frame: &mut Frame, area: Rect) {
 }
 
 fn settings_tab(frame: &mut Frame, area: Rect, state: &mut GameSettings) {
+    let [header, content] = Layout::vertical([Constraint::Fill(1), Constraint::Fill(1)]).areas(area);
+
     let lines = Text::from_iter([Span::from("Settings stuff").bold().cyan()]);
+
+    let title = Paragraph::new(" Settings Menu ").style(
+        Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+    ).block(Block::bordered());
 
     let block = Paragraph::new(lines)
         .alignment(Alignment::Center)
@@ -103,12 +109,11 @@ fn settings_tab(frame: &mut Frame, area: Rect, state: &mut GameSettings) {
                 .padding(Padding::new(0, 0, (area.height / 2) - 3, 0))
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
-                .border_style(Style::default().bg(Color::LightGreen))
-                .title("Settings"),
         )
         .style(Style::new().white());
 
-    frame.render_widget(block, area);
+        frame.render_widget(title, header);
+    frame.render_widget(block, content);
 }
 
 fn credits_tab(frame: &mut Frame, area: Rect) {
@@ -120,7 +125,6 @@ fn credits_tab(frame: &mut Frame, area: Rect) {
                 .padding(Padding::new(0, 0, (area.height / 2) - 3, 0))
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
-                .border_style(Style::default().bg(Color::LightBlue))
                 .title("Credits"),
         )
         .style(Style::new().white());

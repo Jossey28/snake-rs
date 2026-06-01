@@ -239,11 +239,69 @@ impl Default for GameSettings {
 }
 
 impl GameSettings {
-    pub const TOTAL_ROWS: usize = 8;
+    pub const TOTAL_ROWS: usize = 7;
 
     pub fn move_down(&mut self) {
-        self.active_row = (self.active_row + 1) & Self::TOTAL_ROWS;
+        self.active_row = (self.active_row + 1) % Self::TOTAL_ROWS;
     }
 
-    
+    pub fn move_up(&mut self) {
+        if self.active_row == 0 {
+            self.active_row = Self::TOTAL_ROWS - 1;
+        } else {
+            self.active_row -= 1;
+        }
+    }
+
+    pub fn handle_settings_input(&mut self) {
+        match self.active_row {
+            1 => todo!(), // Change name
+            2 => self.invisible = !self.invisible,
+            3 => todo!(), // Take tick rate as input
+            4 => self.switch_color_for_field(),
+            5 => self.switch_color_for_field(),
+            6 => self.switch_color_for_field(),
+            7 => self.switch_color_for_field(),
+            _ => {}
+        }
+    }
+
+    fn switch_color_for_field(&mut self) {
+        let colors: [Color; 8] = [Color::Black; 8];
+        match self.active_row {
+            4 => {
+                let i = colors
+                    .iter()
+                    .position(|&col| col == self.head_color)
+                    .unwrap();
+                let new_color = colors.get((i + 1) & colors.len()).unwrap();
+                self.head_color = *new_color;
+            } // Head
+            5 => {
+                let i = colors
+                    .iter()
+                    .position(|&col| col == self.body_color)
+                    .unwrap();
+                let new_color = colors.get((i + 1) & colors.len()).unwrap();
+                self.body_color = *new_color;
+            } // Body
+            6 => {
+                let i = colors
+                    .iter()
+                    .position(|&col| col == self.wall_color)
+                    .unwrap();
+                let new_color = colors.get((i + 1) & colors.len()).unwrap();
+                self.wall_color = *new_color;
+            } // Wall
+            7 => {
+                let i = colors
+                    .iter()
+                    .position(|&col| col == self.food_color)
+                    .unwrap();
+                let new_color = colors.get((i + 1) & colors.len()).unwrap();
+                self.food_color = *new_color;
+            } // Food
+            _ => unreachable!(),
+        }
+    }
 }
