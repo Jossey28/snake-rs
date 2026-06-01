@@ -14,7 +14,6 @@ use ratatui::widgets::Widget;
 use ratatui::widgets::canvas::{Canvas, Line};
 use ratatui::{DefaultTerminal, Frame};
 
-use crate::AvailableTabs::Instructions;
 use crate::event_handler::{GameEvent, GameEventHandler};
 use crate::game_logic::{Direction, Food, Snake};
 
@@ -107,7 +106,6 @@ impl App {
                         self.snake.move_snake_head();
 
                         let coliding = self.check_colision();
-                        // print!("{:#?}", coliding);
                         if coliding.is_some() {
                             self.handle_colision(coliding.unwrap());
                         }
@@ -144,7 +142,7 @@ impl App {
         }
 
         let eating_food: bool = {
-            let tolerance = 1.0;
+            let tolerance = 1.5;
 
             let snake_x = self.snake.head.current_position.x;
             let snake_y = self.snake.head.current_position.y;
@@ -198,12 +196,16 @@ impl App {
 
         match self.appstate {
             // TODO! Create a death counter with persistent scrore
-            AppState::TitleScreen | AppState::Dead => {
+            AppState::TitleScreen => {
                 let area = Layout::vertical([Constraint::Fill(1), Constraint::Fill(1)])
                     .split(frame.area());
 
                 ui::show_title(frame, area[0]);
-                ui::display_menu(frame, area[1], self.current_tab);
+                ui::display_tabs(frame, area[1] + Offset::new(0, 1), self.current_tab);
+                ui::display_menu(frame, area[1] + Offset::new(1, 0), self.current_tab);
+            }
+            AppState::Dead => {
+                self.appstate = AppState::TitleScreen;
             }
             AppState::Active => {
                 let vertical =
@@ -247,7 +249,6 @@ impl App {
 
                 KeyCode::Tab => {
                     self.current_tab = self.current_tab.next();
-                    // print!("tab: {:#?}", self.current_tab);
                 }
                 _ => {}
             },

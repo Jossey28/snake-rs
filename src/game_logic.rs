@@ -75,7 +75,7 @@ impl Default for Snake {
         let body_parts: Vec<SnakeBody> = {
             let mut tmp: Vec<SnakeBody> = vec![];
 
-            for (_index, val) in (0..10).enumerate() {
+            for (_index, val) in (0..50).enumerate() {
                 let pos = CanvasPosition::new(head.x - (val as f64), head.y);
                 tmp.push(SnakeBody::new(pos, pos));
             }
@@ -185,5 +185,5 @@ impl Snake {
 }
 
 struct GameSettings {
-    
+
 }
