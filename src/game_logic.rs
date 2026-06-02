@@ -205,12 +205,11 @@ impl Snake {
 pub struct GameSettings {
     pub active_row: usize,
 
-    pub name: String,
     pub highscore: u64,
 
     pub invisible: bool,
 
-    pub tick_rate: Duration,
+    // pub tick_rate: Duration,
 
     pub head_color: Color,
     pub body_color: Color,
@@ -223,12 +222,11 @@ impl Default for GameSettings {
         GameSettings {
             active_row: 0,
 
-            name: String::from("unnamed"),
             highscore: 0,
 
             invisible: false,
 
-            tick_rate: Duration::from_millis(10),
+            // tick_rate: Duration::from_millis(10),
 
             head_color: Color::Red,
             body_color: Color::Blue,
@@ -239,7 +237,7 @@ impl Default for GameSettings {
 }
 
 impl GameSettings {
-    pub const TOTAL_ROWS: usize = 7;
+    pub const TOTAL_ROWS: usize = 5;
 
     pub fn move_down(&mut self) {
         self.active_row = (self.active_row + 1) % Self::TOTAL_ROWS;
@@ -253,55 +251,69 @@ impl GameSettings {
         }
     }
 
-    pub fn handle_settings_input(&mut self) {
+    pub fn switch_color_for_field(&mut self) {
+        let colors: [Color; 8] = [
+            Color::Blue,
+            Color::Cyan,
+            Color::DarkGray,
+            Color::Green,
+            Color::LightGreen,
+            Color::LightRed,
+            Color::LightYellow,
+            Color::Red,
+        ];
         match self.active_row {
-            0 => todo!(), // Change name
-            1 => self.invisible = !self.invisible,
-            2 => todo!(), // Take tick rate as input
-            3 => self.switch_color_for_field(),
-            4 => self.switch_color_for_field(),
-            5 => self.switch_color_for_field(),
-            6 => self.switch_color_for_field(),
-            _ => {}
-        }
-    }
-
-    fn switch_color_for_field(&mut self) {
-        let colors: [Color; 8] = [Color::Black; 8];
-        match self.active_row {
-            3 => {
+            2 => {
                 let i = colors
                     .iter()
                     .position(|&col| col == self.head_color)
                     .unwrap();
-                let new_color = colors.get((i + 1) & colors.len()).unwrap();
+                let new_color = colors.get((i + 1) % colors.len()).unwrap();
                 self.head_color = *new_color;
             } // Head
-            4 => {
+            3 => {
                 let i = colors
                     .iter()
                     .position(|&col| col == self.body_color)
                     .unwrap();
-                let new_color = colors.get((i + 1) & colors.len()).unwrap();
+                let new_color = colors.get((i + 1) % colors.len()).unwrap();
                 self.body_color = *new_color;
             } // Body
-            5 => {
+            4 => {
                 let i = colors
                     .iter()
                     .position(|&col| col == self.wall_color)
                     .unwrap();
-                let new_color = colors.get((i + 1) & colors.len()).unwrap();
+                let new_color = colors.get((i + 1) % colors.len()).unwrap();
                 self.wall_color = *new_color;
             } // Wall
-            6 => {
+            5 => {
                 let i = colors
                     .iter()
                     .position(|&col| col == self.food_color)
                     .unwrap();
-                let new_color = colors.get((i + 1) & colors.len()).unwrap();
+                let new_color = colors.get((i + 1) % colors.len()).unwrap();
                 self.food_color = *new_color;
             } // Food
             _ => unreachable!(),
         }
     }
+
+    pub fn toggle_mortality(&mut self) {
+        self.invisible = !self.invisible;
+    }
+
+    // pub fn increment_time(&mut self, increase: bool) {
+    //     if increase {
+    //         let mut tick_rate = self.tick_rate.as_millis();
+    //         tick_rate += 1;
+    //         self.tick_rate = Duration::from_millis(tick_rate.try_into().unwrap());
+    //     } else {
+    //         let mut tick_rate = self.tick_rate.as_millis();
+    //         if tick_rate > 2 {
+    //             tick_rate -= 1;
+    //             self.tick_rate = Duration::from_millis(tick_rate.try_into().unwrap());
+    //         }
+    //     }
+    // }
 }

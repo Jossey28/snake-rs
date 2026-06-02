@@ -23,7 +23,7 @@ fn main() -> Result<()> {
     let mut terminal = ratatui::init();
     let mut app: App = App::default();
 
-    let events = GameEventHandler::new(app.settings.tick_rate);
+    let events = GameEventHandler::new(Duration::from_millis(50));
     let app_result = app.run(&mut terminal, events);
 
     ratatui::restore();
@@ -58,15 +58,14 @@ pub enum AvailableTabs {
     #[default]
     Instructions = 0,
     Settings = 1,
-    Credits = 2,
 }
 
 impl AvailableTabs {
     fn next(self) -> Self {
         match self {
             AvailableTabs::Instructions => AvailableTabs::Settings,
-            AvailableTabs::Settings => AvailableTabs::Credits,
-            AvailableTabs::Credits => AvailableTabs::Instructions,
+            AvailableTabs::Settings => AvailableTabs::Instructions,
+            // AvailableTabs::Credits => AvailableTabs::Instructions,
         }
     }
 }
@@ -171,6 +170,7 @@ impl App {
                 self.increment_score();
                 self.snake.add_to_tail();
             }
+            _ if self.settings.invisible => {}
             _ => self.appstate = AppState::Dead,
         }
     }
@@ -202,7 +202,7 @@ impl App {
         match self.appstate {
             // TODO! Create a death counter with persistent scrore
             AppState::TitleScreen => {
-                let area = Layout::vertical([Constraint::Fill(1), Constraint::Fill(1)])
+                let area = Layout::vertical([Constraint::Fill(1), Constraint::Fill(3)])
                     .split(frame.area());
 
                 ui::show_title(frame, area[0]);
@@ -270,16 +270,31 @@ impl App {
                 match key_event.code {
                     KeyCode::Tab => {
                         self.current_tab = self.current_tab.next();
-                    },
+                    }
 
-                   KeyCode::Down => {
+                    KeyCode::Down => {
                         self.settings.move_down();
-                    },
+                    }
 
                     KeyCode::Up => {
                         self.settings.move_up();
-                    },
+                    }
 
+                    KeyCode::Right if (1..4).contains(&self.settings.active_row) => {
+                        self.settings.switch_color_for_field();
+                    }
+
+                    KeyCode::Right if self.settings.active_row == 0 => {
+                        self.settings.toggle_mortality();
+                    }
+
+                    // KeyCode::Right if self.settings.active_row == 1 => {
+                    //     self.settings.increment_time(true);
+                    // }
+
+                    // KeyCode::Left if self.settings.active_row == 1 => {
+                    //     self.settings.increment_time(false);
+                    // }
                     _ => {}
                 }
             }

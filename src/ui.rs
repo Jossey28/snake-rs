@@ -64,35 +64,51 @@ pub fn display_tabs(frame: &mut Frame, area: Rect, tab: AvailableTabs, state: &m
     match tab {
         AvailableTabs::Instructions => instruction_tab(frame, area),
         AvailableTabs::Settings => settings_tab(frame, area, state),
-        AvailableTabs::Credits => credits_tab(frame, area),
+        // AvailableTabs::Credits => credits_tab(frame, area),
     };
 }
 
 fn instruction_tab(frame: &mut Frame, area: Rect) {
-    let lines = Text::from_iter([
-        Span::from("Hello! Welcome to my snake very own snake clone ;)")
-            .bold()
-            .green(),
-        Span::from("Click tab to view the other menus.")
-            .bold()
-            .cyan(),
-        Span::from("Click Enter to get started. Make sure to have fun!")
-            .bold()
-            .light_red(),
-    ]);
+    let outer = Block::bordered()
+        .title("Settings")
+        .border_type(BorderType::Rounded);
 
-    let block = Paragraph::new(lines)
+    // let [content_area] = Layout::vertical([Constraint::Fill(1)]).areas(outer.inner(area));
+
+    let [_, center, _] = Layout::vertical([
+        Constraint::Fill(0),
+        Constraint::Length(8),
+        Constraint::Fill(0),
+    ])
+    .areas(outer.inner(area));
+
+    let lines = vec![
+        "Hello! Welcome to my snake very own".bold().green().into(),
+        "snake clone ;)".bold().green().into(),
+        "Click tab to view the settings menu.".bold().cyan().into(),
+        "Click Enter to get started.".bold().light_red().into(),
+        "Make sure to have fun!".bold().light_red().into(),
+    ];
+
+    let text = BigText::builder()
         .alignment(Alignment::Center)
-        .block(
-            Block::bordered()
-                .padding(Padding::new(0, 0, (area.height / 2) - 3, 0))
-                .borders(Borders::ALL)
-                .border_type(BorderType::Rounded)
-                .title("Instructions"),
-        )
-        .style(Style::new().white());
+        .pixel_size(PixelSize::Octant)
+        .lines(lines)
+        .build();
 
-    frame.render_widget(block, area);
+    // let block = Paragraph::new(lines)
+    //     .alignment(Alignment::Center)
+    //     .block(
+    //         Block::bordered()
+    //             .padding(Padding::new(0, 0, (area.height / 2) - 3, 0))
+    //             .borders(Borders::ALL)
+    //             .border_type(BorderType::Rounded)
+    //             .title("Instructions"),
+    //     )
+    //     .style(Style::new().white());
+
+    frame.render_widget(outer, area);
+    frame.render_widget(text, center);
 }
 
 fn settings_tab(frame: &mut Frame, area: Rect, state: &mut GameSettings) {
@@ -104,18 +120,17 @@ fn settings_tab(frame: &mut Frame, area: Rect, state: &mut GameSettings) {
         Layout::vertical(Constraint::from_percentages([30, 5, 65])).areas(outer.inner(area));
 
     let line = match state.active_row {
-        0 => "Scoreboard Name",
-        1 => "Invisible Mode",
-        2 => "Tick Rate (Speed)",
-        3 => "Snake Head Color",
-        4 => "Snake Body Color",
-        5 => "Walls Color",
-        6 => "Food Color",
+        0 => "Invisible Mode",
+        // 1 => "Tick Rate (Speed)",
+        1 => "Snake Head Color",
+        2 => "Snake Body Color",
+        3 => "Walls Color",
+        4 => "Food Color",
         _ => unreachable!(),
     };
 
     let notice = Paragraph::new(
-        "use left arrow (<--) and (-->) right arrow to choose settings; up and down to modify",
+        "up arrow (↑) and (↓) down arrow to choose setting ; (-->) right arrow to modify settings",
     )
     .alignment(Alignment::Center)
     .style(Style::default().fg(Color::Cyan));
@@ -127,34 +142,25 @@ fn settings_tab(frame: &mut Frame, area: Rect, state: &mut GameSettings) {
         .alignment(Alignment::Center)
         .build();
 
-        let mut builder = BigText::builder();
+    let mut builder = BigText::builder();
     let content = match state.active_row {
         0 => {
-            let name = state.name.clone();
-            let lines = vec![
-                "Name is currently: ".into(),
-                format!("{}", name).bold().into()
-            ];
-
-            builder.lines(lines)
-        },
-        1 => {
             if state.invisible {
                 builder.lines(vec!["Currently Invisible".into()])
             } else {
-                builder.lines(vec!["Currently Visible".into()])
+                builder.lines(vec!["Currently Mortal".into()])
             }
         }
-        2 => {
-            let tick_rate = state.tick_rate.as_millis().to_string();
-            let lines = vec![
-                "Currently at".into(),
-                format!("{}", tick_rate).bold().into()
-            ];
+        // 1 => {
+        //     let tick_rate = state.tick_rate.as_millis().to_string();
+        //     let lines = vec![
+        //         "Currently at".into(),
+        //         format!("{}ms", tick_rate).bold().into(),
+        //     ];
 
-            builder.lines(lines)
-        }
-        3 => {
+        //     builder.lines(lines)
+        // }
+        1 => {
             let color = state.head_color;
             let lines = vec![
                 "Head color currently set to:".into(),
@@ -163,7 +169,7 @@ fn settings_tab(frame: &mut Frame, area: Rect, state: &mut GameSettings) {
 
             builder.lines(lines)
         }
-        4 => {
+        2 => {
             let color = state.body_color;
             let lines = vec![
                 "Body color currently set to:".into(),
@@ -172,7 +178,7 @@ fn settings_tab(frame: &mut Frame, area: Rect, state: &mut GameSettings) {
 
             builder.lines(lines)
         }
-        5 => {
+        3 => {
             let color = state.wall_color;
             let lines = vec![
                 "Wall color currently set to:".into(),
@@ -181,7 +187,7 @@ fn settings_tab(frame: &mut Frame, area: Rect, state: &mut GameSettings) {
 
             builder.lines(lines)
         }
-        6 => {
+        4 => {
             let color = state.food_color;
             let lines = vec![
                 "Food color currently set to:".into(),
@@ -193,7 +199,10 @@ fn settings_tab(frame: &mut Frame, area: Rect, state: &mut GameSettings) {
         _ => unreachable!(),
     };
 
-    let content = content.alignment(Alignment::Center).pixel_size(PixelSize::Octant).build();
+    let content = content
+        .alignment(Alignment::Center)
+        .pixel_size(PixelSize::Octant)
+        .build();
     frame.render_widget(outer, area);
     frame.render_widget(header, header_area + Offset::new(0, 2));
     frame.render_widget(notice, notice_area);
