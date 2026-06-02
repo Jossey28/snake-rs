@@ -2,6 +2,9 @@
 
 ## 1997 Snake built in Rust
 
+## Mandatory AI Usage Disclaimer
+No copy-pasted AI code. The idea for the project was thought up by me and primarily programmed using online resources and guides. Minimal AI usage was present when attempting to debug non-functioning movement code.
+
 ### Current directory layout
 
 There are currently six important project files
@@ -59,4 +62,4 @@ cargo build --release
 ##
 ### Project Goals
 
-The purpose of this project was to serve as an introduction to the Rust programming language and its culture as well as the Ratatui Terminal-User-Interface library.s
+The purpose of this project was to serve as an introduction to the Rust programming language and its culture as well as the Ratatui Terminal-User-Interface library.
