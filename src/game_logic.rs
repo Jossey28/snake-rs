@@ -255,13 +255,13 @@ impl GameSettings {
 
     pub fn handle_settings_input(&mut self) {
         match self.active_row {
-            1 => todo!(), // Change name
-            2 => self.invisible = !self.invisible,
-            3 => todo!(), // Take tick rate as input
+            0 => todo!(), // Change name
+            1 => self.invisible = !self.invisible,
+            2 => todo!(), // Take tick rate as input
+            3 => self.switch_color_for_field(),
             4 => self.switch_color_for_field(),
             5 => self.switch_color_for_field(),
             6 => self.switch_color_for_field(),
-            7 => self.switch_color_for_field(),
             _ => {}
         }
     }
@@ -269,7 +269,7 @@ impl GameSettings {
     fn switch_color_for_field(&mut self) {
         let colors: [Color; 8] = [Color::Black; 8];
         match self.active_row {
-            4 => {
+            3 => {
                 let i = colors
                     .iter()
                     .position(|&col| col == self.head_color)
@@ -277,7 +277,7 @@ impl GameSettings {
                 let new_color = colors.get((i + 1) & colors.len()).unwrap();
                 self.head_color = *new_color;
             } // Head
-            5 => {
+            4 => {
                 let i = colors
                     .iter()
                     .position(|&col| col == self.body_color)
@@ -285,7 +285,7 @@ impl GameSettings {
                 let new_color = colors.get((i + 1) & colors.len()).unwrap();
                 self.body_color = *new_color;
             } // Body
-            6 => {
+            5 => {
                 let i = colors
                     .iter()
                     .position(|&col| col == self.wall_color)
@@ -293,7 +293,7 @@ impl GameSettings {
                 let new_color = colors.get((i + 1) & colors.len()).unwrap();
                 self.wall_color = *new_color;
             } // Wall
-            7 => {
+            6 => {
                 let i = colors
                     .iter()
                     .position(|&col| col == self.food_color)

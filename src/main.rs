@@ -53,7 +53,7 @@ pub struct App {
     settings: GameSettings,
 }
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum AvailableTabs {
     #[default]
     Instructions = 0,
@@ -206,7 +206,12 @@ impl App {
                     .split(frame.area());
 
                 ui::show_title(frame, area[0]);
-                ui::display_tabs(frame, area[1] + Offset::new(0, 1), self.current_tab, &mut self.settings);
+                ui::display_tabs(
+                    frame,
+                    area[1] + Offset::new(0, 1),
+                    self.current_tab,
+                    &mut self.settings,
+                );
                 ui::display_menu(frame, area[1] + Offset::new(1, 0), self.current_tab);
             }
             AppState::Dead => {
@@ -249,14 +254,35 @@ impl App {
                 _ => {}
             },
 
-            AppState::TitleScreen => match key_event.code {
-                KeyCode::Enter => self.start_game(),
+            AppState::TitleScreen if self.current_tab != AvailableTabs::Settings => {
+                match key_event.code {
+                    KeyCode::Enter => self.start_game(),
 
-                KeyCode::Tab => {
-                    self.current_tab = self.current_tab.next();
+                    KeyCode::Tab => {
+                        self.current_tab = self.current_tab.next();
+                    }
+
+                    _ => {}
                 }
-                _ => {}
-            },
+            }
+
+            AppState::TitleScreen if self.current_tab == AvailableTabs::Settings => {
+                match key_event.code {
+                    KeyCode::Tab => {
+                        self.current_tab = self.current_tab.next();
+                    },
+
+                   KeyCode::Down => {
+                        self.settings.move_down();
+                    },
+
+                    KeyCode::Up => {
+                        self.settings.move_up();
+                    },
+
+                    _ => {}
+                }
+            }
 
             _ => {}
         };

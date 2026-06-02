@@ -1,7 +1,11 @@
+use std::fmt::format;
+
+use color_eyre::owo_colors::style;
 use ratatui::Frame;
 use ratatui::layout::Alignment;
 use ratatui::layout::Constraint;
 use ratatui::layout::Layout;
+use ratatui::layout::Offset;
 use ratatui::layout::Rect;
 use ratatui::style::Color;
 use ratatui::style::Modifier;
@@ -96,13 +100,104 @@ fn settings_tab(frame: &mut Frame, area: Rect, state: &mut GameSettings) {
         .title("Settings")
         .border_type(BorderType::Rounded);
 
-    let [header, content] =
-        Layout::vertical([Constraint::Fill(1), Constraint::Fill(1)]).areas(outer.inner(area));
+    let [header_area, notice_area, content_area] =
+        Layout::vertical(Constraint::from_percentages([30, 5, 65])).areas(outer.inner(area));
 
-    
+    let line = match state.active_row {
+        0 => "Scoreboard Name",
+        1 => "Invisible Mode",
+        2 => "Tick Rate (Speed)",
+        3 => "Snake Head Color",
+        4 => "Snake Body Color",
+        5 => "Walls Color",
+        6 => "Food Color",
+        _ => unreachable!(),
+    };
 
+    let notice = Paragraph::new(
+        "use left arrow (<--) and (-->) right arrow to choose settings; up and down to modify",
+    )
+    .alignment(Alignment::Center)
+    .style(Style::default().fg(Color::Cyan));
+
+    // let settings_title = B::new(line).alignment(Alignment::Center).bg(Color::LightCyan);
+    let header = BigText::builder()
+        .pixel_size(PixelSize::Octant)
+        .lines(vec![line.into()])
+        .alignment(Alignment::Center)
+        .build();
+
+        let mut builder = BigText::builder();
+    let content = match state.active_row {
+        0 => {
+            let name = state.name.clone();
+            let lines = vec![
+                "Name is currently: ".into(),
+                format!("{}", name).bold().into()
+            ];
+
+            builder.lines(lines)
+        },
+        1 => {
+            if state.invisible {
+                builder.lines(vec!["Currently Invisible".into()])
+            } else {
+                builder.lines(vec!["Currently Visible".into()])
+            }
+        }
+        2 => {
+            let tick_rate = state.tick_rate.as_millis().to_string();
+            let lines = vec![
+                "Currently at".into(),
+                format!("{}", tick_rate).bold().into()
+            ];
+
+            builder.lines(lines)
+        }
+        3 => {
+            let color = state.head_color;
+            let lines = vec![
+                "Head color currently set to:".into(),
+                format!("{}", color).fg(color).bold().into(),
+            ];
+
+            builder.lines(lines)
+        }
+        4 => {
+            let color = state.body_color;
+            let lines = vec![
+                "Body color currently set to:".into(),
+                format!("{}", color).fg(color).bold().into(),
+            ];
+
+            builder.lines(lines)
+        }
+        5 => {
+            let color = state.wall_color;
+            let lines = vec![
+                "Wall color currently set to:".into(),
+                format!("{}", color).fg(color).bold().into(),
+            ];
+
+            builder.lines(lines)
+        }
+        6 => {
+            let color = state.food_color;
+            let lines = vec![
+                "Food color currently set to:".into(),
+                format!("{}", color).fg(color).bold().into(),
+            ];
+
+            builder.lines(lines)
+        }
+        _ => unreachable!(),
+    };
+
+    let content = content.alignment(Alignment::Center).pixel_size(PixelSize::Octant).build();
     frame.render_widget(outer, area);
-    
+    frame.render_widget(header, header_area + Offset::new(0, 2));
+    frame.render_widget(notice, notice_area);
+    frame.render_widget(content, content_area + Offset::new(0, 3));
 }
 
 fn credits_tab(frame: &mut Frame, area: Rect) {
