@@ -263,7 +263,7 @@ impl GameSettings {
             Color::Red,
         ];
         match self.active_row {
-            2 => {
+            1 => {
                 let i = colors
                     .iter()
                     .position(|&col| col == self.head_color)
@@ -271,7 +271,7 @@ impl GameSettings {
                 let new_color = colors.get((i + 1) % colors.len()).unwrap();
                 self.head_color = *new_color;
             } // Head
-            3 => {
+            2 => {
                 let i = colors
                     .iter()
                     .position(|&col| col == self.body_color)
@@ -279,7 +279,7 @@ impl GameSettings {
                 let new_color = colors.get((i + 1) % colors.len()).unwrap();
                 self.body_color = *new_color;
             } // Body
-            4 => {
+            3 => {
                 let i = colors
                     .iter()
                     .position(|&col| col == self.wall_color)
@@ -287,7 +287,7 @@ impl GameSettings {
                 let new_color = colors.get((i + 1) % colors.len()).unwrap();
                 self.wall_color = *new_color;
             } // Wall
-            5 => {
+            4 => {
                 let i = colors
                     .iter()
                     .position(|&col| col == self.food_color)

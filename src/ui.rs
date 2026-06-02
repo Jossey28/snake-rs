@@ -75,14 +75,14 @@ fn instruction_tab(frame: &mut Frame, area: Rect) {
 
     // let [content_area] = Layout::vertical([Constraint::Fill(1)]).areas(outer.inner(area));
 
-    let [_, center, _] = Layout::vertical([
-        Constraint::Fill(0),
+    let [_, center, footer] = Layout::vertical([
+        Constraint::Fill(1),
         Constraint::Length(8),
-        Constraint::Fill(0),
+        Constraint::Fill(1),
     ])
     .areas(outer.inner(area));
 
-    let lines = vec![
+    let intro_lines = vec![
         "Hello! Welcome to my snake very own".bold().green().into(),
         "snake clone ;)".bold().green().into(),
         "Click tab to view the settings menu.".bold().cyan().into(),
@@ -90,11 +90,19 @@ fn instruction_tab(frame: &mut Frame, area: Rect) {
         "Make sure to have fun!".bold().light_red().into(),
     ];
 
-    let text = BigText::builder()
+    let intro = BigText::builder()
         .alignment(Alignment::Center)
         .pixel_size(PixelSize::Octant)
-        .lines(lines)
+        .lines(intro_lines)
         .build();
+
+    let instructions_lines = vec![
+        Line::from_iter(vec!["Start game -> Enter"]),
+        Line::from_iter(vec!["Quit game to Title -> Q "]),
+        Line::from_iter(vec!["Exit game -> Esc "]),
+    ];
+
+    let instructions = Paragraph::new(instructions_lines).alignment(Alignment::Center);
 
     // let block = Paragraph::new(lines)
     //     .alignment(Alignment::Center)
@@ -108,7 +116,8 @@ fn instruction_tab(frame: &mut Frame, area: Rect) {
     //     .style(Style::new().white());
 
     frame.render_widget(outer, area);
-    frame.render_widget(text, center);
+    frame.render_widget(intro, center);
+    frame.render_widget(instructions, footer + Offset::new(0, 3));
 }
 
 fn settings_tab(frame: &mut Frame, area: Rect, state: &mut GameSettings) {
@@ -226,10 +235,8 @@ fn credits_tab(frame: &mut Frame, area: Rect) {
 }
 
 pub fn display_score(frame: &mut Frame, area: Rect, count: i64) {
-    let title = Line::from_iter([
-        Span::from("Score: ").bold(),
-        Span::from(format!("{}", count).blue()),
-    ]);
+    let score = Line::from(vec!["Score: ".bold().into(), format!("{}", count).blue().into()]);
 
-    frame.render_widget(title, area);
+    let display = Paragraph::new(score).alignment(Alignment::Center);
+    frame.render_widget(display, area);
 }

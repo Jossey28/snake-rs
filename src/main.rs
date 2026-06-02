@@ -8,7 +8,6 @@ use color_eyre::eyre::Result;
 use crossterm::event::{KeyCode, KeyEvent};
 
 use ratatui::layout::{Constraint, Layout, Offset};
-use ratatui::style::Color;
 use ratatui::symbols::Marker;
 use ratatui::widgets::Widget;
 use ratatui::widgets::canvas::{Canvas, Line};
@@ -23,7 +22,7 @@ fn main() -> Result<()> {
     let mut terminal = ratatui::init();
     let mut app: App = App::default();
 
-    let events = GameEventHandler::new(Duration::from_millis(50));
+    let events = GameEventHandler::new(Duration::from_millis(10));
     let app_result = app.run(&mut terminal, events);
 
     ratatui::restore();
@@ -280,7 +279,7 @@ impl App {
                         self.settings.move_up();
                     }
 
-                    KeyCode::Right if (1..4).contains(&self.settings.active_row) => {
+                    KeyCode::Right if (1..=4).contains(&self.settings.active_row) => {
                         self.settings.switch_color_for_field();
                     }
 

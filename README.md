@@ -49,18 +49,14 @@ git clone https://github.com/Jossey28/snake-rs.git
 cd snake-rs
 
 cargo build --release
+```
 
+*executable location depends on build target; for windows its*
+```bash
 .\target\release\snake-rs.exe
 ```
 
 ##
 ### Project Goals
 
-The purpose of this project was to serve as an introduction to the Rust programming language and its culture as well as the Ratatui Terminal-User-Interface library.
-
-##
-### Project Update
-
-The app in its current state has served its purpose of introducing me to the core concepts of rust and how it is supposed to be programmed, so I will be putting a stop here.
-
-I can see myself returning to this project and turning it into a fully-functional game, however my primary interest doesn't lie in game design, so I will be moving on.
+The purpose of this project was to serve as an introduction to the Rust programming language and its culture as well as the Ratatui Terminal-User-Interface library.s
